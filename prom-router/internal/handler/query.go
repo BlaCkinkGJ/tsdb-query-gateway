@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/example/prom-router/internal/models"
-	"github.com/example/prom-router/internal/service"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
 )
 
 type QueryHandler struct {

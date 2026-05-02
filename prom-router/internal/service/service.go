@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/example/prom-router/internal/models"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
 )
 
 // QueryService defines the core interface for handling Prometheus queries.

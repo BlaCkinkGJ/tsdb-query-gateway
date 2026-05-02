@@ -6,11 +6,11 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/example/prom-router/internal/client"
-	"github.com/example/prom-router/internal/config"
-	"github.com/example/prom-router/internal/handler"
-	"github.com/example/prom-router/internal/middleware"
-	"github.com/example/prom-router/internal/service"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/client"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/config"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/handler"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/middleware"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
 )
 
 func main() {

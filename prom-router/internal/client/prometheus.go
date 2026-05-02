@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/example/prom-router/internal/models"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
 )
 
 type PrometheusClient interface {

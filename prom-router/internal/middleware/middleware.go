@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"github.com/example/prom-router/internal/service"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
 )
 
 // Middleware is a function that wraps a QueryService and returns a new QueryService.

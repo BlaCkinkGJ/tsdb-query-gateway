@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/example/prom-router/internal/client"
-	"github.com/example/prom-router/internal/models"
-	"github.com/example/prom-router/internal/service"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/client"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
 )
 
 type aiMiddleware struct {
