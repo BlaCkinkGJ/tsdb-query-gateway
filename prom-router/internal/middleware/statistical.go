@@ -4,33 +4,31 @@ import (
 	"context"
 	"log"
 
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/config"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/discovery"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 func init() {
-	Register("statistical", func(cfg *config.Config, router *gin.RouterGroup) Middleware {
+	Register("statistical", func(mwConfig map[string]interface{}, router *gin.RouterGroup, reg discovery.Registry) Middleware {
 		// Example of attaching a specific route for statistical configuration
 		// router.GET("/statistical/config", func(c *gin.Context) { c.JSON(200, gin.H{"smoothing": true}) })
 
-		return NewStatisticalMiddleware()
+		return &statisticalMiddlewareFactory{}
 	})
+}
+
+type statisticalMiddlewareFactory struct{}
+
+func (f *statisticalMiddlewareFactory) Wrap(next service.QueryService) service.QueryService {
+	return &statisticalMiddleware{
+		next: next,
+	}
 }
 
 type statisticalMiddleware struct {
 	next service.QueryService
-}
-
-// NewStatisticalMiddleware creates a middleware that applies statistical techniques
-// to restructure or predict query results.
-func NewStatisticalMiddleware() Middleware {
-	return func(next service.QueryService) service.QueryService {
-		return &statisticalMiddleware{
-			next: next,
-		}
-	}
 }
 
 func (m *statisticalMiddleware) Query(ctx context.Context, req models.PromQueryRequest) (*models.PromResponse, error) {

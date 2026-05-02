@@ -3,19 +3,32 @@ package handler
 import (
 	"net/http"
 
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/discovery"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 type QueryHandler struct {
-	queryService service.QueryService
+	registry discovery.Registry
 }
 
-func NewQueryHandler(queryService service.QueryService) *QueryHandler {
+func NewQueryHandler(registry discovery.Registry) *QueryHandler {
 	return &QueryHandler{
-		queryService: queryService,
+		registry: registry,
 	}
+}
+
+func (h *QueryHandler) getQueryService() (service.QueryService, error) {
+	svcObj, err := h.registry.Get("QueryService")
+	if err != nil {
+		return nil, err
+	}
+	svc, ok := svcObj.(service.QueryService)
+	if !ok {
+		return nil, err
+	}
+	return svc, nil
 }
 
 func (h *QueryHandler) HandleQuery(c *gin.Context) {
@@ -37,7 +50,13 @@ func (h *QueryHandler) HandleQuery(c *gin.Context) {
 		return
 	}
 
-	res, err := h.queryService.Query(c.Request.Context(), req)
+	queryService, err := h.getQueryService()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "errorType": "server_error", "error": "internal service error"})
+		return
+	}
+
+	res, err := queryService.Query(c.Request.Context(), req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "errorType": "server_error", "error": err.Error()})
 		return
@@ -68,7 +87,13 @@ func (h *QueryHandler) HandleQueryRange(c *gin.Context) {
 		return
 	}
 
-	res, err := h.queryService.QueryRange(c.Request.Context(), req)
+	queryService, err := h.getQueryService()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "errorType": "server_error", "error": "internal service error"})
+		return
+	}
+
+	res, err := queryService.QueryRange(c.Request.Context(), req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "errorType": "server_error", "error": err.Error()})
 		return

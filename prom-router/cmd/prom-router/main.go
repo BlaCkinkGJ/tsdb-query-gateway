@@ -7,6 +7,7 @@ import (
 
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/client"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/config"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/discovery"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/handler"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/middleware"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
@@ -31,31 +32,41 @@ func main() {
 	// API Group
 	api := engine.Group("/api/v1")
 
+	// Initialize Service Registry
+	registry := discovery.NewRegistry()
+
+	// Register Core Clients
 	promClient := client.NewPrometheusClient()
+	registry.Register("PrometheusClient", promClient)
 
 	// Create the base router service
-	baseRouterService := service.NewRouterService(cfg.PromEndpoints, promClient)
+	baseRouterService := service.NewRouterService(cfg.PromEndpoints, registry)
 
 	// Build the middleware chain
 	var middlewares []middleware.Middleware
 
-	// Dynamically resolve middlewares from config
-	for _, mwName := range cfg.Middlewares {
+	// Dynamically resolve middlewares from structured config map
+	for _, mwConfig := range cfg.Middlewares {
+		mwName, ok := mwConfig["name"].(string)
+		if !ok || mwName == "" {
+			log.Println("Warning: Middleware configuration missing 'name' field, skipping.")
+			continue
+		}
+
 		factory := middleware.Get(mwName)
 		if factory == nil {
 			log.Printf("Warning: Middleware '%s' is declared in config but not registered.", mwName)
 			continue
 		}
-		// Pass config and the router group to allow middlewares to register their own management routes if needed
-		middlewares = append(middlewares, factory(cfg, api))
+		// Pass the specific config block, router, and registry to the factory
+		middlewares = append(middlewares, factory(mwConfig, api, registry))
 	}
 
 	// Chain the middlewares around the base service.
-	// If no middlewares are configured, Chain will safely return baseRouterService directly (bypassing middlewares).
-	// The request will flow: Handler -> middlewares[0] -> middlewares[1] -> ... -> baseRouterService
 	finalService := middleware.Chain(baseRouterService, middlewares...)
+	registry.Register("QueryService", finalService)
 
-	queryHandler := handler.NewQueryHandler(finalService)
+	queryHandler := handler.NewQueryHandler(registry)
 
 	// Register core Prometheus routes
 	queryHandler.RegisterRoutes(api)

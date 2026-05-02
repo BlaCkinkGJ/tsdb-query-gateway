@@ -7,18 +7,19 @@ import (
 	"sync"
 
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/client"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/discovery"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
 )
 
 type RouterService struct {
 	promEndpoints []string
-	promClient    client.PrometheusClient
+	registry      discovery.Registry
 }
 
-func NewRouterService(promEndpoints []string, promClient client.PrometheusClient) *RouterService {
+func NewRouterService(promEndpoints []string, registry discovery.Registry) *RouterService {
 	return &RouterService{
 		promEndpoints: promEndpoints,
-		promClient:    promClient,
+		registry:      registry,
 	}
 }
 
@@ -26,6 +27,15 @@ func NewRouterService(promEndpoints []string, promClient client.PrometheusClient
 func (s *RouterService) Query(ctx context.Context, req models.PromQueryRequest) (*models.PromResponse, error) {
 	if len(s.promEndpoints) == 0 {
 		return nil, fmt.Errorf("no prometheus endpoints configured")
+	}
+
+	clientObj, err := s.registry.Get("PrometheusClient")
+	if err != nil {
+		return nil, err
+	}
+	promClient, ok := clientObj.(client.PrometheusClient)
+	if !ok {
+		return nil, fmt.Errorf("PrometheusClient is not of expected interface type")
 	}
 
 	results := make([]*models.PromResponse, len(s.promEndpoints))
@@ -37,7 +47,7 @@ func (s *RouterService) Query(ctx context.Context, req models.PromQueryRequest) 
 		wg.Add(1)
 		go func(idx int, targetURL string) {
 			defer wg.Done()
-			res, err := s.promClient.Query(ctx, targetURL, req)
+			res, err := promClient.Query(ctx, targetURL, req)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
@@ -65,6 +75,15 @@ func (s *RouterService) QueryRange(ctx context.Context, req models.PromQueryRang
 		return nil, fmt.Errorf("no prometheus endpoints configured")
 	}
 
+	clientObj, err := s.registry.Get("PrometheusClient")
+	if err != nil {
+		return nil, err
+	}
+	promClient, ok := clientObj.(client.PrometheusClient)
+	if !ok {
+		return nil, fmt.Errorf("PrometheusClient is not of expected interface type")
+	}
+
 	results := make([]*models.PromResponse, len(s.promEndpoints))
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -74,7 +93,7 @@ func (s *RouterService) QueryRange(ctx context.Context, req models.PromQueryRang
 		wg.Add(1)
 		go func(idx int, targetURL string) {
 			defer wg.Done()
-			res, err := s.promClient.QueryRange(ctx, targetURL, req)
+			res, err := promClient.QueryRange(ctx, targetURL, req)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {

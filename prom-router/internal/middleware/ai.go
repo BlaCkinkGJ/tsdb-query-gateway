@@ -1,82 +1,117 @@
 package middleware
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
+	"time"
 
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/client"
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/config"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/discovery"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 func init() {
-	Register("ai", func(cfg *config.Config, router *gin.RouterGroup) Middleware {
-		if cfg.AIEndpoint == "" {
-			log.Println("AI Middleware enabled but AIEndpoint is empty in config")
+	Register("ai", func(mwConfig map[string]interface{}, router *gin.RouterGroup, reg discovery.Registry) Middleware {
+		var endpoint string
+		if ep, ok := mwConfig["endpoint"].(string); ok {
+			endpoint = ep
+		} else {
+			log.Println("AI Middleware enabled but 'endpoint' is missing in config")
 		}
 
-		// Example of attaching a specific route for AI configuration if needed
-		// router.GET("/ai/status", func(c *gin.Context) { c.JSON(200, gin.H{"status": "active"}) })
+		httpClient := &http.Client{
+			Timeout: 60 * time.Second,
+		}
 
-		aiClient := client.NewAIClient()
-		return NewAIMiddleware(cfg.AIEndpoint, aiClient)
+		return &aiMiddlewareFactory{
+			aiEndpoint: endpoint,
+			httpClient: httpClient,
+		}
 	})
+}
+
+type aiMiddlewareFactory struct {
+	aiEndpoint string
+	httpClient *http.Client
+}
+
+func (f *aiMiddlewareFactory) Wrap(next service.QueryService) service.QueryService {
+	return &aiMiddleware{
+		next:       next,
+		aiEndpoint: f.aiEndpoint,
+		httpClient: f.httpClient,
+	}
 }
 
 type aiMiddleware struct {
 	next       service.QueryService
 	aiEndpoint string
-	aiClient   client.AIClient
-}
-
-// NewAIMiddleware creates a middleware that intercepts query results and processes them via an AI endpoint.
-func NewAIMiddleware(aiEndpoint string, aiClient client.AIClient) Middleware {
-	return func(next service.QueryService) service.QueryService {
-		return &aiMiddleware{
-			next:       next,
-			aiEndpoint: aiEndpoint,
-			aiClient:   aiClient,
-		}
-	}
+	httpClient *http.Client
 }
 
 func (m *aiMiddleware) Query(ctx context.Context, req models.PromQueryRequest) (*models.PromResponse, error) {
-	// 1. Call the next node in the chain
 	res, err := m.next.Query(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	// 2. Process with AI middleware if successful
 	if m.aiEndpoint != "" && res != nil && res.Status == "success" {
-		aiResult, err := m.aiClient.Process(ctx, m.aiEndpoint, res)
-		if err != nil {
-			return nil, fmt.Errorf("error processing with AI middleware: %w", err)
-		}
-		return aiResult, nil
+		return m.processAI(ctx, res)
 	}
 
 	return res, nil
 }
 
 func (m *aiMiddleware) QueryRange(ctx context.Context, req models.PromQueryRangeRequest) (*models.PromResponse, error) {
-	// 1. Call the next node in the chain
 	res, err := m.next.QueryRange(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	// 2. Process with AI middleware if successful
 	if m.aiEndpoint != "" && res != nil && res.Status == "success" {
-		aiResult, err := m.aiClient.Process(ctx, m.aiEndpoint, res)
-		if err != nil {
-			return nil, fmt.Errorf("error processing with AI middleware: %w", err)
-		}
-		return aiResult, nil
+		return m.processAI(ctx, res)
 	}
 
 	return res, nil
+}
+
+func (m *aiMiddleware) processAI(ctx context.Context, data *models.PromResponse) (*models.PromResponse, error) {
+	payloadBytes, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", m.aiEndpoint, bytes.NewReader(payloadBytes))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := m.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("AI endpoint error: status %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	var modifiedResp models.PromResponse
+	if err := json.Unmarshal(body, &modifiedResp); err != nil {
+		return nil, err
+	}
+
+	return &modifiedResp, nil
 }

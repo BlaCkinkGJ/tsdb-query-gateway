@@ -6,10 +6,9 @@ import (
 )
 
 type Config struct {
-	Port          int      `json:"port"`
-	PromEndpoints []string `json:"prom_endpoints"`
-	AIEndpoint    string   `json:"ai_endpoint,omitempty"`
-	Middlewares   []string `json:"middlewares,omitempty"`
+	Port          int                      `json:"port"`
+	PromEndpoints []string                 `json:"prom_endpoints"`
+	Middlewares   []map[string]interface{} `json:"middlewares,omitempty"`
 }
 
 func LoadConfig(path string) (*Config, error) {
