@@ -1,11 +1,11 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
+	"github.com/gin-gonic/gin"
 )
 
 type QueryHandler struct {
@@ -18,63 +18,68 @@ func NewQueryHandler(queryService service.QueryService) *QueryHandler {
 	}
 }
 
-func (h *QueryHandler) HandleQuery(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
-		return
+func (h *QueryHandler) HandleQuery(c *gin.Context) {
+	req := models.PromQueryRequest{
+		Query:   c.Query("query"),
+		Time:    c.Query("time"),
+		Timeout: c.Query("timeout"),
 	}
 
-	req := models.PromQueryRequest{
-		Query:   r.FormValue("query"),
-		Time:    r.FormValue("time"),
-		Timeout: r.FormValue("timeout"),
+	// Also support form data if necessary
+	if req.Query == "" {
+		req.Query = c.PostForm("query")
+		req.Time = c.PostForm("time")
+		req.Timeout = c.PostForm("timeout")
 	}
 
 	if req.Query == "" {
-		http.Error(w, `{"status":"error","errorType":"bad_data","error":"missing query"}`, http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "errorType": "bad_data", "error": "missing query"})
 		return
 	}
 
-	res, err := h.queryService.Query(r.Context(), req)
+	res, err := h.queryService.Query(c.Request.Context(), req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "errorType": "server_error", "error": err.Error()})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(res)
+	c.JSON(http.StatusOK, res)
 }
 
-func (h *QueryHandler) HandleQueryRange(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
-		return
+func (h *QueryHandler) HandleQueryRange(c *gin.Context) {
+	req := models.PromQueryRangeRequest{
+		Query:   c.Query("query"),
+		Start:   c.Query("start"),
+		End:     c.Query("end"),
+		Step:    c.Query("step"),
+		Timeout: c.Query("timeout"),
 	}
 
-	req := models.PromQueryRangeRequest{
-		Query:   r.FormValue("query"),
-		Start:   r.FormValue("start"),
-		End:     r.FormValue("end"),
-		Step:    r.FormValue("step"),
-		Timeout: r.FormValue("timeout"),
+	if req.Query == "" {
+		req.Query = c.PostForm("query")
+		req.Start = c.PostForm("start")
+		req.End = c.PostForm("end")
+		req.Step = c.PostForm("step")
+		req.Timeout = c.PostForm("timeout")
 	}
 
 	if req.Query == "" || req.Start == "" || req.End == "" || req.Step == "" {
-		http.Error(w, `{"status":"error","errorType":"bad_data","error":"missing required parameters"}`, http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "errorType": "bad_data", "error": "missing required parameters"})
 		return
 	}
 
-	res, err := h.queryService.QueryRange(r.Context(), req)
+	res, err := h.queryService.QueryRange(c.Request.Context(), req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "errorType": "server_error", "error": err.Error()})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(res)
+	c.JSON(http.StatusOK, res)
 }
 
-func (h *QueryHandler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/api/v1/query", h.HandleQuery)
-	mux.HandleFunc("/api/v1/query_range", h.HandleQueryRange)
+func (h *QueryHandler) RegisterRoutes(router *gin.RouterGroup) {
+	router.GET("/query", h.HandleQuery)
+	router.POST("/query", h.HandleQuery)
+	router.GET("/query_range", h.HandleQueryRange)
+	router.POST("/query_range", h.HandleQueryRange)
 }

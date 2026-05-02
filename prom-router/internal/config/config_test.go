@@ -25,7 +25,7 @@ func TestLoadConfig(t *testing.T) {
 	}
 	defer os.Remove(tmpFile.Name())
 
-	content := `{"port": 9091, "prom_endpoints": ["http://prom1", "http://prom2"], "ai_endpoint": "http://ai1", "enable_statistical_mw": true, "enable_ai_mw": true}`
+	content := `{"port": 9091, "prom_endpoints": ["http://prom1", "http://prom2"], "ai_endpoint": "http://ai1", "middlewares": ["statistical", "ai"]}`
 	if _, err := tmpFile.Write([]byte(content)); err != nil {
 		t.Fatalf("failed to write to temp file: %v", err)
 	}
@@ -44,10 +44,7 @@ func TestLoadConfig(t *testing.T) {
 	if cfg.AIEndpoint != "http://ai1" {
 		t.Errorf("expected ai endpoint http://ai1, got %s", cfg.AIEndpoint)
 	}
-	if !cfg.EnableStatisticalMW {
-		t.Errorf("expected enable_statistical_mw to be true")
-	}
-	if !cfg.EnableAIMW {
-		t.Errorf("expected enable_ai_mw to be true")
+	if len(cfg.Middlewares) != 2 || cfg.Middlewares[0] != "statistical" || cfg.Middlewares[1] != "ai" {
+		t.Errorf("expected middlewares [statistical, ai], got %v", cfg.Middlewares)
 	}
 }

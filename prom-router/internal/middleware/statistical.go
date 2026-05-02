@@ -4,9 +4,20 @@ import (
 	"context"
 	"log"
 
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/config"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
+	"github.com/gin-gonic/gin"
 )
+
+func init() {
+	Register("statistical", func(cfg *config.Config, router *gin.RouterGroup) Middleware {
+		// Example of attaching a specific route for statistical configuration
+		// router.GET("/statistical/config", func(c *gin.Context) { c.JSON(200, gin.H{"smoothing": true}) })
+
+		return NewStatisticalMiddleware()
+	})
+}
 
 type statisticalMiddleware struct {
 	next service.QueryService

@@ -3,11 +3,28 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/client"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/config"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
+	"github.com/gin-gonic/gin"
 )
+
+func init() {
+	Register("ai", func(cfg *config.Config, router *gin.RouterGroup) Middleware {
+		if cfg.AIEndpoint == "" {
+			log.Println("AI Middleware enabled but AIEndpoint is empty in config")
+		}
+
+		// Example of attaching a specific route for AI configuration if needed
+		// router.GET("/ai/status", func(c *gin.Context) { c.JSON(200, gin.H{"status": "active"}) })
+
+		aiClient := client.NewAIClient()
+		return NewAIMiddleware(cfg.AIEndpoint, aiClient)
+	})
+}
 
 type aiMiddleware struct {
 	next       service.QueryService
