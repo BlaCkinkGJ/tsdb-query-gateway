@@ -6,9 +6,11 @@ import (
 )
 
 type Config struct {
-	Port          int      `json:"port"`
-	PromEndpoints []string `json:"prom_endpoints"`
-	AIEndpoint    string   `json:"ai_endpoint,omitempty"`
+	Port                int      `json:"port"`
+	PromEndpoints       []string `json:"prom_endpoints"`
+	AIEndpoint          string   `json:"ai_endpoint,omitempty"`
+	EnableStatisticalMW bool     `json:"enable_statistical_mw,omitempty"`
+	EnableAIMW          bool     `json:"enable_ai_mw,omitempty"`
 }
 
 func LoadConfig(path string) (*Config, error) {

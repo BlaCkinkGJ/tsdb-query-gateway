@@ -9,12 +9,12 @@ import (
 )
 
 type QueryHandler struct {
-	routerService service.RouterService
+	queryService service.QueryService
 }
 
-func NewQueryHandler(routerService service.RouterService) *QueryHandler {
+func NewQueryHandler(queryService service.QueryService) *QueryHandler {
 	return &QueryHandler{
-		routerService: routerService,
+		queryService: queryService,
 	}
 }
 
@@ -35,7 +35,7 @@ func (h *QueryHandler) HandleQuery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := h.routerService.Query(r.Context(), req)
+	res, err := h.queryService.Query(r.Context(), req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -64,7 +64,7 @@ func (h *QueryHandler) HandleQueryRange(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	res, err := h.routerService.QueryRange(r.Context(), req)
+	res, err := h.queryService.QueryRange(r.Context(), req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

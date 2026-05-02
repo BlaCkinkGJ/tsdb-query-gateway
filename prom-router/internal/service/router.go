@@ -10,28 +10,20 @@ import (
 	"github.com/example/prom-router/internal/models"
 )
 
-type RouterService interface {
-	Query(ctx context.Context, req models.PromQueryRequest) (*models.PromResponse, error)
-	QueryRange(ctx context.Context, req models.PromQueryRangeRequest) (*models.PromResponse, error)
-}
-
-type routerServiceImpl struct {
+type RouterService struct {
 	promEndpoints []string
-	aiEndpoint    string
 	promClient    client.PrometheusClient
-	aiClient      client.AIClient
 }
 
-func NewRouterService(promEndpoints []string, aiEndpoint string, promClient client.PrometheusClient, aiClient client.AIClient) RouterService {
-	return &routerServiceImpl{
+func NewRouterService(promEndpoints []string, promClient client.PrometheusClient) *RouterService {
+	return &RouterService{
 		promEndpoints: promEndpoints,
-		aiEndpoint:    aiEndpoint,
 		promClient:    promClient,
-		aiClient:      aiClient,
 	}
 }
 
-func (s *routerServiceImpl) Query(ctx context.Context, req models.PromQueryRequest) (*models.PromResponse, error) {
+// Query implements the QueryService interface.
+func (s *RouterService) Query(ctx context.Context, req models.PromQueryRequest) (*models.PromResponse, error) {
 	if len(s.promEndpoints) == 0 {
 		return nil, fmt.Errorf("no prometheus endpoints configured")
 	}
@@ -61,27 +53,14 @@ func (s *routerServiceImpl) Query(ctx context.Context, req models.PromQueryReque
 	wg.Wait()
 
 	if firstErr != nil {
-		// Just a simple error handling: return the first error encountered.
-		// In a production-ready system, we might want to return partial results or log the error and continue.
 		return nil, fmt.Errorf("error querying downstream prometheus: %w", firstErr)
 	}
 
-	mergedResult := s.mergeResults(results)
-
-	if s.aiEndpoint != "" && mergedResult != nil && mergedResult.Status == "success" {
-		aiResult, err := s.aiClient.Process(ctx, s.aiEndpoint, mergedResult)
-		if err != nil {
-			// Fallback to original result if AI fails, or return error depending on requirements.
-			// Let's return error for strictness.
-			return nil, fmt.Errorf("error processing with AI middleware: %w", err)
-		}
-		return aiResult, nil
-	}
-
-	return mergedResult, nil
+	return s.mergeResults(results), nil
 }
 
-func (s *routerServiceImpl) QueryRange(ctx context.Context, req models.PromQueryRangeRequest) (*models.PromResponse, error) {
+// QueryRange implements the QueryService interface.
+func (s *RouterService) QueryRange(ctx context.Context, req models.PromQueryRangeRequest) (*models.PromResponse, error) {
 	if len(s.promEndpoints) == 0 {
 		return nil, fmt.Errorf("no prometheus endpoints configured")
 	}
@@ -114,27 +93,15 @@ func (s *routerServiceImpl) QueryRange(ctx context.Context, req models.PromQuery
 		return nil, fmt.Errorf("error querying downstream prometheus: %w", firstErr)
 	}
 
-	mergedResult := s.mergeResults(results)
-
-	if s.aiEndpoint != "" && mergedResult != nil && mergedResult.Status == "success" {
-		aiResult, err := s.aiClient.Process(ctx, s.aiEndpoint, mergedResult)
-		if err != nil {
-			return nil, fmt.Errorf("error processing with AI middleware: %w", err)
-		}
-		return aiResult, nil
-	}
-
-	return mergedResult, nil
+	return s.mergeResults(results), nil
 }
 
 // mergeResults merges the data from multiple Prometheus responses.
-// This is a simplified merge logic. Real Prometheus merging can be complex depending on ResultType (vector, matrix, etc).
-func (s *routerServiceImpl) mergeResults(results []*models.PromResponse) *models.PromResponse {
+func (s *RouterService) mergeResults(results []*models.PromResponse) *models.PromResponse {
 	if len(results) == 0 {
 		return nil
 	}
 
-	// We assume all successful queries return the same ResultType
 	var mergedResultType string
 	var allMetrics []interface{}
 
@@ -154,7 +121,7 @@ func (s *routerServiceImpl) mergeResults(results []*models.PromResponse) *models
 	}
 
 	if mergedResultType == "" {
-		return results[0] // Fallback if no success found or data could not be merged
+		return results[0] // Fallback
 	}
 
 	mergedRaw, _ := json.Marshal(allMetrics)
