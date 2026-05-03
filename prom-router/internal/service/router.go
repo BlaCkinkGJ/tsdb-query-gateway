@@ -4,7 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sync"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/client"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/discovery"
@@ -39,31 +40,22 @@ func (s *RouterService) Query(ctx context.Context, req models.PromQueryRequest) 
 	}
 
 	results := make([]*models.PromResponse, len(s.promEndpoints))
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	var firstErr error
+	g, gCtx := errgroup.WithContext(ctx)
 
 	for i, endpoint := range s.promEndpoints {
-		wg.Add(1)
-		go func(idx int, targetURL string) {
-			defer wg.Done()
-			res, err := promClient.Query(ctx, targetURL, req)
-			mu.Lock()
-			defer mu.Unlock()
+		idx, targetURL := i, endpoint // capture variables for closure
+		g.Go(func() error {
+			res, err := promClient.Query(gCtx, targetURL, req)
 			if err != nil {
-				if firstErr == nil {
-					firstErr = err
-				}
-				return
+				return err
 			}
 			results[idx] = res
-		}(i, endpoint)
+			return nil
+		})
 	}
 
-	wg.Wait()
-
-	if firstErr != nil {
-		return nil, fmt.Errorf("error querying downstream prometheus: %w", firstErr)
+	if err := g.Wait(); err != nil {
+		return nil, fmt.Errorf("error querying downstream prometheus: %w", err)
 	}
 
 	return s.mergeResults(results), nil
@@ -85,31 +77,22 @@ func (s *RouterService) QueryRange(ctx context.Context, req models.PromQueryRang
 	}
 
 	results := make([]*models.PromResponse, len(s.promEndpoints))
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	var firstErr error
+	g, gCtx := errgroup.WithContext(ctx)
 
 	for i, endpoint := range s.promEndpoints {
-		wg.Add(1)
-		go func(idx int, targetURL string) {
-			defer wg.Done()
-			res, err := promClient.QueryRange(ctx, targetURL, req)
-			mu.Lock()
-			defer mu.Unlock()
+		idx, targetURL := i, endpoint // capture variables for closure
+		g.Go(func() error {
+			res, err := promClient.QueryRange(gCtx, targetURL, req)
 			if err != nil {
-				if firstErr == nil {
-					firstErr = err
-				}
-				return
+				return err
 			}
 			results[idx] = res
-		}(i, endpoint)
+			return nil
+		})
 	}
 
-	wg.Wait()
-
-	if firstErr != nil {
-		return nil, fmt.Errorf("error querying downstream prometheus: %w", firstErr)
+	if err := g.Wait(); err != nil {
+		return nil, fmt.Errorf("error querying downstream prometheus: %w", err)
 	}
 
 	return s.mergeResults(results), nil
