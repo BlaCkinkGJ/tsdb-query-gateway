@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/discovery"
@@ -26,7 +27,7 @@ func (h *QueryHandler) getQueryService() (service.QueryService, error) {
 	}
 	svc, ok := svcObj.(service.QueryService)
 	if !ok {
-		return nil, err
+		return nil, fmt.Errorf("service is not of type QueryService")
 	}
 	return svc, nil
 }
