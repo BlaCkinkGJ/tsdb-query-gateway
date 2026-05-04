@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -105,10 +106,13 @@ func (s *RouterService) mergeResults(results []*models.PromResponse) *models.Pro
 	}
 
 	var mergedResultType string
-	var allMetrics []interface{}
+	var buffer bytes.Buffer
+	buffer.WriteByte('[')
+
+	hasElements := false
 
 	for _, res := range results {
-		if res == nil || res.Status != "success" {
+		if res == nil || res.Status != "success" || len(res.Data.Result) == 0 {
 			continue
 		}
 
@@ -116,23 +120,37 @@ func (s *RouterService) mergeResults(results []*models.PromResponse) *models.Pro
 			mergedResultType = res.Data.ResultType
 		}
 
-		var metrics []interface{}
-		if err := json.Unmarshal(res.Data.Result, &metrics); err == nil {
-			allMetrics = append(allMetrics, metrics...)
+		rawResult := bytes.TrimSpace(res.Data.Result)
+		// We only merge arrays. Check if it starts and ends with brackets.
+		if len(rawResult) >= 2 && rawResult[0] == '[' && rawResult[len(rawResult)-1] == ']' {
+			inner := bytes.TrimSpace(rawResult[1 : len(rawResult)-1])
+			if len(inner) > 0 {
+				if hasElements {
+					buffer.WriteByte(',')
+				}
+				buffer.Write(inner)
+				hasElements = true
+			}
 		}
 	}
 
-	if mergedResultType == "" {
-		return results[0] // Fallback
-	}
+	buffer.WriteByte(']')
 
-	mergedRaw, _ := json.Marshal(allMetrics)
+	if mergedResultType == "" {
+		// Fallback to the first non-nil result if any
+		for _, r := range results {
+			if r != nil {
+				return r
+			}
+		}
+		return nil
+	}
 
 	return &models.PromResponse{
 		Status: "success",
 		Data: models.PromData{
 			ResultType: mergedResultType,
-			Result:     mergedRaw,
+			Result:     json.RawMessage(buffer.Bytes()),
 		},
 	}
 }
