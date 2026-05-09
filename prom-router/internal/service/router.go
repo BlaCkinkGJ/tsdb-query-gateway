@@ -1,7 +1,6 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,19 +8,18 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/client"
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/discovery"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
 )
 
 type RouterService struct {
 	promEndpoints []string
-	registry      discovery.Registry
+	promClient    client.PrometheusClient
 }
 
-func NewRouterService(promEndpoints []string, registry discovery.Registry) *RouterService {
+func NewRouterService(promEndpoints []string, promClient client.PrometheusClient) *RouterService {
 	return &RouterService{
 		promEndpoints: promEndpoints,
-		registry:      registry,
+		promClient:    promClient,
 	}
 }
 
@@ -31,22 +29,13 @@ func (s *RouterService) Query(ctx context.Context, req models.PromQueryRequest) 
 		return nil, fmt.Errorf("no prometheus endpoints configured")
 	}
 
-	clientObj, err := s.registry.Get("PrometheusClient")
-	if err != nil {
-		return nil, err
-	}
-	promClient, ok := clientObj.(client.PrometheusClient)
-	if !ok {
-		return nil, fmt.Errorf("PrometheusClient is not of expected interface type")
-	}
-
 	results := make([]*models.PromResponse, len(s.promEndpoints))
 	g, gCtx := errgroup.WithContext(ctx)
 
 	for i, endpoint := range s.promEndpoints {
 		idx, targetURL := i, endpoint // capture variables for closure
 		g.Go(func() error {
-			res, err := promClient.Query(gCtx, targetURL, req)
+			res, err := s.promClient.Query(gCtx, targetURL, req)
 			if err != nil {
 				return err
 			}
@@ -59,7 +48,7 @@ func (s *RouterService) Query(ctx context.Context, req models.PromQueryRequest) 
 		return nil, fmt.Errorf("error querying downstream prometheus: %w", err)
 	}
 
-	return s.mergeResults(results), nil
+	return s.mergeResults(results)
 }
 
 // QueryRange implements the QueryService interface.
@@ -68,22 +57,13 @@ func (s *RouterService) QueryRange(ctx context.Context, req models.PromQueryRang
 		return nil, fmt.Errorf("no prometheus endpoints configured")
 	}
 
-	clientObj, err := s.registry.Get("PrometheusClient")
-	if err != nil {
-		return nil, err
-	}
-	promClient, ok := clientObj.(client.PrometheusClient)
-	if !ok {
-		return nil, fmt.Errorf("PrometheusClient is not of expected interface type")
-	}
-
 	results := make([]*models.PromResponse, len(s.promEndpoints))
 	g, gCtx := errgroup.WithContext(ctx)
 
 	for i, endpoint := range s.promEndpoints {
 		idx, targetURL := i, endpoint // capture variables for closure
 		g.Go(func() error {
-			res, err := promClient.QueryRange(gCtx, targetURL, req)
+			res, err := s.promClient.QueryRange(gCtx, targetURL, req)
 			if err != nil {
 				return err
 			}
@@ -96,20 +76,17 @@ func (s *RouterService) QueryRange(ctx context.Context, req models.PromQueryRang
 		return nil, fmt.Errorf("error querying downstream prometheus: %w", err)
 	}
 
-	return s.mergeResults(results), nil
+	return s.mergeResults(results)
 }
 
 // mergeResults merges the data from multiple Prometheus responses.
-func (s *RouterService) mergeResults(results []*models.PromResponse) *models.PromResponse {
+func (s *RouterService) mergeResults(results []*models.PromResponse) (*models.PromResponse, error) {
 	if len(results) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	var mergedResultType string
-	var buffer bytes.Buffer
-	buffer.WriteByte('[')
-
-	hasElements := false
+	var allResults []json.RawMessage
 
 	for _, res := range results {
 		if res == nil || res.Status != "success" || len(res.Data.Result) == 0 {
@@ -118,39 +95,39 @@ func (s *RouterService) mergeResults(results []*models.PromResponse) *models.Pro
 
 		if mergedResultType == "" {
 			mergedResultType = res.Data.ResultType
+		} else if mergedResultType != res.Data.ResultType {
+			return nil, fmt.Errorf("conflicting ResultType: %s and %s", mergedResultType, res.Data.ResultType)
 		}
 
-		rawResult := bytes.TrimSpace(res.Data.Result)
-		// We only merge arrays. Check if it starts and ends with brackets.
-		if len(rawResult) >= 2 && rawResult[0] == '[' && rawResult[len(rawResult)-1] == ']' {
-			inner := bytes.TrimSpace(rawResult[1 : len(rawResult)-1])
-			if len(inner) > 0 {
-				if hasElements {
-					buffer.WriteByte(',')
-				}
-				buffer.Write(inner)
-				hasElements = true
-			}
+		var partial []json.RawMessage
+		if err := json.Unmarshal(res.Data.Result, &partial); err != nil {
+			// If it's not an array, maybe it's a single object (less common for vectors/matrices but possible for some types)
+			// But Prometheus results for vector/matrix are always arrays.
+			return nil, fmt.Errorf("failed to unmarshal result part: %w", err)
 		}
+		allResults = append(allResults, partial...)
 	}
-
-	buffer.WriteByte(']')
 
 	if mergedResultType == "" {
 		// Fallback to the first non-nil result if any
 		for _, r := range results {
 			if r != nil {
-				return r
+				return r, nil
 			}
 		}
-		return nil
+		return nil, nil
+	}
+
+	mergedBytes, err := json.Marshal(allResults)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal merged results: %w", err)
 	}
 
 	return &models.PromResponse{
 		Status: "success",
 		Data: models.PromData{
 			ResultType: mergedResultType,
-			Result:     json.RawMessage(buffer.Bytes()),
+			Result:     json.RawMessage(mergedBytes),
 		},
-	}
+	}, nil
 }

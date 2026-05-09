@@ -1,35 +1,21 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/discovery"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 type QueryHandler struct {
-	registry discovery.Registry
+	queryService service.QueryService
 }
 
-func NewQueryHandler(registry discovery.Registry) *QueryHandler {
+func NewQueryHandler(queryService service.QueryService) *QueryHandler {
 	return &QueryHandler{
-		registry: registry,
+		queryService: queryService,
 	}
-}
-
-func (h *QueryHandler) getQueryService() (service.QueryService, error) {
-	svcObj, err := h.registry.Get("QueryService")
-	if err != nil {
-		return nil, err
-	}
-	svc, ok := svcObj.(service.QueryService)
-	if !ok {
-		return nil, fmt.Errorf("service is not of type QueryService")
-	}
-	return svc, nil
 }
 
 func (h *QueryHandler) HandleQuery(c *gin.Context) {
@@ -51,13 +37,7 @@ func (h *QueryHandler) HandleQuery(c *gin.Context) {
 		return
 	}
 
-	queryService, err := h.getQueryService()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "errorType": "server_error", "error": "internal service error"})
-		return
-	}
-
-	res, err := queryService.Query(c.Request.Context(), req)
+	res, err := h.queryService.Query(c.Request.Context(), req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "errorType": "server_error", "error": err.Error()})
 		return
@@ -88,13 +68,7 @@ func (h *QueryHandler) HandleQueryRange(c *gin.Context) {
 		return
 	}
 
-	queryService, err := h.getQueryService()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "errorType": "server_error", "error": "internal service error"})
-		return
-	}
-
-	res, err := queryService.QueryRange(c.Request.Context(), req)
+	res, err := h.queryService.QueryRange(c.Request.Context(), req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "errorType": "server_error", "error": err.Error()})
 		return

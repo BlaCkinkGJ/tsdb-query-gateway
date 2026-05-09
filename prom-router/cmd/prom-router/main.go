@@ -40,7 +40,7 @@ func main() {
 	registry.Register("PrometheusClient", promClient)
 
 	// Create the base router service
-	baseRouterService := service.NewRouterService(cfg.PromEndpoints, registry)
+	baseRouterService := service.NewRouterService(cfg.PromEndpoints, promClient)
 
 	// Build the middleware chain
 	var middlewares []middleware.Middleware
@@ -49,14 +49,12 @@ func main() {
 	for _, mwConfig := range cfg.Middlewares {
 		mwName, ok := mwConfig["name"].(string)
 		if !ok || mwName == "" {
-			log.Println("Warning: Middleware configuration missing 'name' field, skipping.")
-			continue
+			log.Fatalf("Middleware configuration missing 'name' field")
 		}
 
 		factory := middleware.Get(mwName)
 		if factory == nil {
-			log.Printf("Warning: Middleware '%s' is declared in config but not registered.", mwName)
-			continue
+			log.Fatalf("Middleware '%s' is declared in config but not registered.", mwName)
 		}
 		// Pass the specific config block, router, and registry to the factory
 		middlewares = append(middlewares, factory(mwConfig, api, registry))
@@ -66,7 +64,7 @@ func main() {
 	finalService := middleware.Chain(baseRouterService, middlewares...)
 	registry.Register("QueryService", finalService)
 
-	queryHandler := handler.NewQueryHandler(registry)
+	queryHandler := handler.NewQueryHandler(finalService)
 
 	// Register core Prometheus routes
 	queryHandler.RegisterRoutes(api)

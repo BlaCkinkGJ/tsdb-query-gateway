@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/discovery"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
 	"github.com/gin-gonic/gin"
 )
@@ -23,10 +22,8 @@ func (s *mockQueryService) QueryRange(ctx context.Context, req models.PromQueryR
 func TestHandleQuery(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	reg := discovery.NewRegistry()
-	reg.Register("QueryService", &mockQueryService{})
-
-	h := NewQueryHandler(reg)
+	mockSvc := &mockQueryService{}
+	h := NewQueryHandler(mockSvc)
 	router := gin.Default()
 	api := router.Group("/api/v1")
 	h.RegisterRoutes(api)

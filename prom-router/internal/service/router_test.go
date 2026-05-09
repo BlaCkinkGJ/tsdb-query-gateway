@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/discovery"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
 )
 
@@ -29,17 +28,14 @@ func (m *mockPromClient) QueryRange(ctx context.Context, targetURL string, req m
 }
 
 func TestRouterService_Query(t *testing.T) {
-	reg := discovery.NewRegistry()
-
 	mockClient := &mockPromClient{
 		result: []interface{}{
 			map[string]interface{}{"metric": map[string]string{"__name__": "up"}},
 		},
 	}
-	reg.Register("PrometheusClient", mockClient)
 
 	endpoints := []string{"http://prom1", "http://prom2"}
-	svc := NewRouterService(endpoints, reg)
+	svc := NewRouterService(endpoints, mockClient)
 
 	req := models.PromQueryRequest{Query: "up"}
 	res, err := svc.Query(context.Background(), req)
