@@ -5,18 +5,16 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/discovery"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
 )
 
 type mockPromClient struct {
+	result []interface{}
 }
 
 func (m *mockPromClient) Query(ctx context.Context, targetURL string, req models.PromQueryRequest) (*models.PromResponse, error) {
-	// Return unique metrics based on targetURL to avoid de-duplication in test
-	result := []interface{}{
-		map[string]interface{}{"metric": map[string]string{"__name__": "up", "instance": targetURL}},
-	}
-	raw, _ := json.Marshal(result)
+	raw, _ := json.Marshal(m.result)
 	return &models.PromResponse{
 		Status: "success",
 		Data: models.PromData{
@@ -31,10 +29,17 @@ func (m *mockPromClient) QueryRange(ctx context.Context, targetURL string, req m
 }
 
 func TestRouterService_Query(t *testing.T) {
-	mockClient := &mockPromClient{}
+	reg := discovery.NewRegistry()
+
+	mockClient := &mockPromClient{
+		result: []interface{}{
+			map[string]interface{}{"metric": map[string]string{"__name__": "up"}},
+		},
+	}
+	reg.Register("PrometheusClient", mockClient)
 
 	endpoints := []string{"http://prom1", "http://prom2"}
-	svc := NewRouterService(endpoints, mockClient)
+	svc := NewRouterService(endpoints, reg)
 
 	req := models.PromQueryRequest{Query: "up"}
 	res, err := svc.Query(context.Background(), req)

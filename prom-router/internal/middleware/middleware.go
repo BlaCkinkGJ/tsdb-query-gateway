@@ -15,7 +15,7 @@ type Middleware interface {
 
 // Factory defines a constructor for a Middleware.
 // It accepts its specific config block, a Gin RouterGroup, and the service registry.
-type Factory func(mwConfig map[string]interface{}, router *gin.RouterGroup, reg discovery.Registry) (Middleware, error)
+type Factory func(mwConfig map[string]interface{}, router *gin.RouterGroup, reg discovery.Registry) Middleware
 
 var registry = make(map[string]Factory)
 

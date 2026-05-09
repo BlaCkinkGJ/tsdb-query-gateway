@@ -30,11 +30,10 @@ func NewPrometheusClient() PrometheusClient {
 }
 
 func (c *prometheusClientImpl) Query(ctx context.Context, targetURL string, req models.PromQueryRequest) (*models.PromResponse, error) {
-	u, err := url.Parse(targetURL)
+	u, err := url.Parse(targetURL + "/api/v1/query")
 	if err != nil {
 		return nil, err
 	}
-	u = u.JoinPath("api/v1/query")
 	q := u.Query()
 	q.Set("query", req.Query)
 	if req.Time != "" {
@@ -54,11 +53,10 @@ func (c *prometheusClientImpl) Query(ctx context.Context, targetURL string, req 
 }
 
 func (c *prometheusClientImpl) QueryRange(ctx context.Context, targetURL string, req models.PromQueryRangeRequest) (*models.PromResponse, error) {
-	u, err := url.Parse(targetURL)
+	u, err := url.Parse(targetURL + "/api/v1/query_range")
 	if err != nil {
 		return nil, err
 	}
-	u = u.JoinPath("api/v1/query_range")
 	q := u.Query()
 	q.Set("query", req.Query)
 	q.Set("start", req.Start)

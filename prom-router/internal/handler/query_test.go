@@ -22,8 +22,9 @@ func (s *mockQueryService) QueryRange(ctx context.Context, req models.PromQueryR
 func TestHandleQuery(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	mockSvc := &mockQueryService{}
-	h := NewQueryHandler(mockSvc)
+	mockService := &mockQueryService{}
+	h := NewQueryHandler(mockService)
+
 	router := gin.Default()
 	api := router.Group("/api/v1")
 	h.RegisterRoutes(api)

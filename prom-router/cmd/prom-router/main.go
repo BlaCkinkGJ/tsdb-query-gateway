@@ -40,7 +40,7 @@ func main() {
 	registry.Register("PrometheusClient", promClient)
 
 	// Create the base router service
-	baseRouterService := service.NewRouterService(cfg.PromEndpoints, promClient)
+	baseRouterService := service.NewRouterService(cfg.PromEndpoints, registry)
 
 	// Build the middleware chain
 	var middlewares []middleware.Middleware
@@ -49,19 +49,17 @@ func main() {
 	for _, mwConfig := range cfg.Middlewares {
 		mwName, ok := mwConfig["name"].(string)
 		if !ok || mwName == "" {
-			log.Fatalf("Middleware configuration missing 'name' field")
+			log.Println("Warning: Middleware configuration missing 'name' field, skipping.")
+			continue
 		}
 
 		factory := middleware.Get(mwName)
 		if factory == nil {
-			log.Fatalf("Middleware '%s' is declared in config but not registered.", mwName)
+			log.Printf("Warning: Middleware '%s' is declared in config but not registered.", mwName)
+			continue
 		}
 		// Pass the specific config block, router, and registry to the factory
-		mw, err := factory(mwConfig, api, registry)
-		if err != nil {
-			log.Fatalf("failed to initialize middleware '%s': %v", mwName, err)
-		}
-		middlewares = append(middlewares, mw)
+		middlewares = append(middlewares, factory(mwConfig, api, registry))
 	}
 
 	// Chain the middlewares around the base service.

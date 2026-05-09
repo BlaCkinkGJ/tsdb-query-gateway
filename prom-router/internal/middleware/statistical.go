@@ -11,11 +11,11 @@ import (
 )
 
 func init() {
-	Register("statistical", func(mwConfig map[string]interface{}, router *gin.RouterGroup, reg discovery.Registry) (Middleware, error) {
+	Register("statistical", func(mwConfig map[string]interface{}, router *gin.RouterGroup, reg discovery.Registry) Middleware {
 		// Example of attaching a specific route for statistical configuration
 		// router.GET("/statistical/config", func(c *gin.Context) { c.JSON(200, gin.H{"smoothing": true}) })
 
-		return &statisticalMiddlewareFactory{}, nil
+		return &statisticalMiddlewareFactory{}
 	})
 }
 
