@@ -57,7 +57,11 @@ func main() {
 			log.Fatalf("Middleware '%s' is declared in config but not registered.", mwName)
 		}
 		// Pass the specific config block, router, and registry to the factory
-		middlewares = append(middlewares, factory(mwConfig, api, registry))
+		mw, err := factory(mwConfig, api, registry)
+		if err != nil {
+			log.Fatalf("failed to initialize middleware '%s': %v", mwName, err)
+		}
+		middlewares = append(middlewares, mw)
 	}
 
 	// Chain the middlewares around the base service.

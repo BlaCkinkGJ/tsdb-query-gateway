@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"time"
 
@@ -17,12 +16,12 @@ import (
 )
 
 func init() {
-	Register("ai", func(mwConfig map[string]interface{}, router *gin.RouterGroup, reg discovery.Registry) Middleware {
+	Register("ai", func(mwConfig map[string]interface{}, router *gin.RouterGroup, reg discovery.Registry) (Middleware, error) {
 		var endpoint string
-		if ep, ok := mwConfig["endpoint"].(string); ok {
+		if ep, ok := mwConfig["endpoint"].(string); ok && ep != "" {
 			endpoint = ep
 		} else {
-			log.Println("AI Middleware enabled but 'endpoint' is missing in config")
+			return nil, fmt.Errorf("AI Middleware enabled but 'endpoint' is missing or empty in config")
 		}
 
 		httpClient := &http.Client{
@@ -32,7 +31,7 @@ func init() {
 		return &aiMiddlewareFactory{
 			aiEndpoint: endpoint,
 			httpClient: httpClient,
-		}
+		}, nil
 	})
 }
 

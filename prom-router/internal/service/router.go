@@ -87,6 +87,7 @@ func (s *RouterService) mergeResults(results []*models.PromResponse) (*models.Pr
 
 	var mergedResultType string
 	var allResults []json.RawMessage
+	seenSeries := make(map[string]bool)
 
 	for _, res := range results {
 		if res == nil || res.Status != "success" || len(res.Data.Result) == 0 {
@@ -99,13 +100,26 @@ func (s *RouterService) mergeResults(results []*models.PromResponse) (*models.Pr
 			return nil, fmt.Errorf("conflicting ResultType: %s and %s", mergedResultType, res.Data.ResultType)
 		}
 
+		// Scalar and String types represent fixed-size results (not mergeable arrays).
+		// We return the first successful result for these types.
+		if mergedResultType == "scalar" || mergedResultType == "string" {
+			return res, nil
+		}
+
 		var partial []json.RawMessage
 		if err := json.Unmarshal(res.Data.Result, &partial); err != nil {
-			// If it's not an array, maybe it's a single object (less common for vectors/matrices but possible for some types)
-			// But Prometheus results for vector/matrix are always arrays.
 			return nil, fmt.Errorf("failed to unmarshal result part: %w", err)
 		}
-		allResults = append(allResults, partial...)
+
+		// Simple de-duplication for vector/matrix results based on the raw JSON content of the result item.
+		// In a production environment, this should ideally decode the "metric" labels for better accuracy.
+		for _, item := range partial {
+			itemStr := string(item)
+			if !seenSeries[itemStr] {
+				allResults = append(allResults, item)
+				seenSeries[itemStr] = true
+			}
+		}
 	}
 
 	if mergedResultType == "" {
