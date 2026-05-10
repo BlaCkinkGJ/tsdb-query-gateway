@@ -1,10 +1,9 @@
 # Build Stage
 FROM golang:1.24-alpine AS builder
 
-# Set environment variables for go build
+# Set environment variables for go build (GOARCH is auto-detected)
 ENV CGO_ENABLED=0 \
-    GOOS=linux \
-    GOARCH=amd64
+    GOOS=linux
 
 WORKDIR /app
 

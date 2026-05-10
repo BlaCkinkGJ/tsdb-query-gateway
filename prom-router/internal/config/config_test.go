@@ -25,7 +25,7 @@ func TestLoadConfig(t *testing.T) {
 	}
 	defer os.Remove(tmpFile.Name())
 
-	content := `{"port": 9091, "prom_endpoints": ["http://prom1", "http://prom2"], "middlewares": [{"name": "statistical"}, {"name": "ai", "endpoint": "http://ai1"}]}`
+	content := `{"port": 9091, "prom_endpoints": ["http://prom1", "http://prom2"], "middlewares": [{"name": "statistical"}, {"name": "ai", "config": {"endpoint": "http://ai1"}}]}`
 	if _, err := tmpFile.Write([]byte(content)); err != nil {
 		t.Fatalf("failed to write to temp file: %v", err)
 	}
@@ -45,14 +45,14 @@ func TestLoadConfig(t *testing.T) {
 		t.Fatalf("expected 2 middlewares, got %v", len(cfg.Middlewares))
 	}
 
-	if name, ok := cfg.Middlewares[0]["name"].(string); !ok || name != "statistical" {
-		t.Errorf("expected first middleware name to be 'statistical', got %v", cfg.Middlewares[0]["name"])
+	if cfg.Middlewares[0].Name != "statistical" {
+		t.Errorf("expected first middleware name to be 'statistical', got %v", cfg.Middlewares[0].Name)
 	}
 
-	if name, ok := cfg.Middlewares[1]["name"].(string); !ok || name != "ai" {
-		t.Errorf("expected second middleware name to be 'ai', got %v", cfg.Middlewares[1]["name"])
+	if cfg.Middlewares[1].Name != "ai" {
+		t.Errorf("expected second middleware name to be 'ai', got %v", cfg.Middlewares[1].Name)
 	}
-	if endpoint, ok := cfg.Middlewares[1]["endpoint"].(string); !ok || endpoint != "http://ai1" {
-		t.Errorf("expected second middleware endpoint to be 'http://ai1', got %v", cfg.Middlewares[1]["endpoint"])
+	if string(cfg.Middlewares[1].Config) != `{"endpoint": "http://ai1"}` {
+		t.Errorf("expected second middleware config to be '{\"endpoint\": \"http://ai1\"}', got %s", string(cfg.Middlewares[1].Config))
 	}
 }

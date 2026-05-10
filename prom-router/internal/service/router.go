@@ -8,19 +8,18 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/client"
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/discovery"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
 )
 
 type RouterService struct {
 	promEndpoints []string
-	registry      discovery.Registry
+	promClient    client.PrometheusClient
 }
 
-func NewRouterService(promEndpoints []string, registry discovery.Registry) *RouterService {
+func NewRouterService(promEndpoints []string, promClient client.PrometheusClient) *RouterService {
 	return &RouterService{
 		promEndpoints: promEndpoints,
-		registry:      registry,
+		promClient:    promClient,
 	}
 }
 
@@ -30,22 +29,13 @@ func (s *RouterService) Query(ctx context.Context, req models.PromQueryRequest) 
 		return nil, fmt.Errorf("no prometheus endpoints configured")
 	}
 
-	clientObj, err := s.registry.Get("PrometheusClient")
-	if err != nil {
-		return nil, err
-	}
-	promClient, ok := clientObj.(client.PrometheusClient)
-	if !ok {
-		return nil, fmt.Errorf("PrometheusClient is not of expected interface type")
-	}
-
 	results := make([]*models.PromResponse, len(s.promEndpoints))
 	g, gCtx := errgroup.WithContext(ctx)
 
 	for i, endpoint := range s.promEndpoints {
 		idx, targetURL := i, endpoint // capture variables for closure
 		g.Go(func() error {
-			res, err := promClient.Query(gCtx, targetURL, req)
+			res, err := s.promClient.Query(gCtx, targetURL, req)
 			if err != nil {
 				return err
 			}
@@ -67,22 +57,13 @@ func (s *RouterService) QueryRange(ctx context.Context, req models.PromQueryRang
 		return nil, fmt.Errorf("no prometheus endpoints configured")
 	}
 
-	clientObj, err := s.registry.Get("PrometheusClient")
-	if err != nil {
-		return nil, err
-	}
-	promClient, ok := clientObj.(client.PrometheusClient)
-	if !ok {
-		return nil, fmt.Errorf("PrometheusClient is not of expected interface type")
-	}
-
 	results := make([]*models.PromResponse, len(s.promEndpoints))
 	g, gCtx := errgroup.WithContext(ctx)
 
 	for i, endpoint := range s.promEndpoints {
 		idx, targetURL := i, endpoint // capture variables for closure
 		g.Go(func() error {
-			res, err := promClient.QueryRange(gCtx, targetURL, req)
+			res, err := s.promClient.QueryRange(gCtx, targetURL, req)
 			if err != nil {
 				return err
 			}
@@ -135,7 +116,13 @@ func (s *RouterService) mergeResults(results []*models.PromResponse) *models.Pro
 		return nil
 	}
 
-	mergedRaw, _ := json.Marshal(allMetrics)
+	mergedRaw, err := json.Marshal(allMetrics)
+	if err != nil {
+		// As this is a helper function not returning error originally,
+		// if merging fails we fallback to returning nil for safety.
+		// A proper architectural fix would involve changing mergeResults signature.
+		return nil
+	}
 
 	return &models.PromResponse{
 		Status: "success",

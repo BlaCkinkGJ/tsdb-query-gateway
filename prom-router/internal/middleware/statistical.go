@@ -2,16 +2,15 @@ package middleware
 
 import (
 	"context"
-	"log"
 
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/discovery"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/config"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 func init() {
-	Register("statistical", func(mwConfig map[string]interface{}, router *gin.RouterGroup, reg discovery.Registry) Middleware {
+	_ = Register("statistical", func(mwConfig config.MiddlewareConfig, router *gin.RouterGroup) Middleware {
 		// Example of attaching a specific route for statistical configuration
 		// router.GET("/statistical/config", func(c *gin.Context) { c.JSON(200, gin.H{"smoothing": true}) })
 
@@ -58,11 +57,8 @@ func (m *statisticalMiddleware) QueryRange(ctx context.Context, req models.PromQ
 }
 
 func (m *statisticalMiddleware) applyStatistics(res *models.PromResponse) {
-	// Dummy logic for statistical modifications.
+	// TODO: Dummy logic for statistical modifications.
 	// In a real application, you would deserialize res.Data.Result,
 	// apply statistical smoothing, anomaly detection, or predictions,
 	// and then reserialize it.
-
-	// E.g., log.Println("Applying statistical techniques to response...")
-	_ = log.Printf // just to prevent unused import error if we comment it out
 }

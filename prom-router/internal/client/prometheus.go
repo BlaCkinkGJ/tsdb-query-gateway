@@ -21,19 +21,27 @@ type prometheusClientImpl struct {
 	httpClient *http.Client
 }
 
-func NewPrometheusClient() PrometheusClient {
+func NewPrometheusClient(timeout time.Duration) PrometheusClient {
+	if timeout == 0 {
+		timeout = 30 * time.Second
+	}
 	return &prometheusClientImpl{
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: timeout,
 		},
 	}
 }
 
 func (c *prometheusClientImpl) Query(ctx context.Context, targetURL string, req models.PromQueryRequest) (*models.PromResponse, error) {
-	u, err := url.Parse(targetURL + "/api/v1/query")
+	rawURL, err := url.JoinPath(targetURL, "/api/v1/query")
 	if err != nil {
 		return nil, err
 	}
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, err
+	}
+
 	q := u.Query()
 	q.Set("query", req.Query)
 	if req.Time != "" {
@@ -44,7 +52,7 @@ func (c *prometheusClientImpl) Query(ctx context.Context, targetURL string, req 
 	}
 	u.RawQuery = q.Encode()
 
-	httpReq, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -53,10 +61,15 @@ func (c *prometheusClientImpl) Query(ctx context.Context, targetURL string, req 
 }
 
 func (c *prometheusClientImpl) QueryRange(ctx context.Context, targetURL string, req models.PromQueryRangeRequest) (*models.PromResponse, error) {
-	u, err := url.Parse(targetURL + "/api/v1/query_range")
+	rawURL, err := url.JoinPath(targetURL, "/api/v1/query_range")
 	if err != nil {
 		return nil, err
 	}
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, err
+	}
+
 	q := u.Query()
 	q.Set("query", req.Query)
 	q.Set("start", req.Start)
@@ -67,7 +80,7 @@ func (c *prometheusClientImpl) QueryRange(ctx context.Context, targetURL string,
 	}
 	u.RawQuery = q.Encode()
 
-	httpReq, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
 	}

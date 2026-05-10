@@ -7,7 +7,6 @@ import (
 
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/client"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/config"
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/discovery"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/handler"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/middleware"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
@@ -32,23 +31,20 @@ func main() {
 	// API Group
 	api := engine.Group("/api/v1")
 
-	// Initialize Service Registry
-	registry := discovery.NewRegistry()
-
-	// Register Core Clients
-	promClient := client.NewPrometheusClient()
-	registry.Register("PrometheusClient", promClient)
+	// Initialize Core Clients
+	// You can load timeout from config here; using 0 triggers the default 30s
+	promClient := client.NewPrometheusClient(0)
 
 	// Create the base router service
-	baseRouterService := service.NewRouterService(cfg.PromEndpoints, registry)
+	baseRouterService := service.NewRouterService(cfg.PromEndpoints, promClient)
 
 	// Build the middleware chain
 	var middlewares []middleware.Middleware
 
 	// Dynamically resolve middlewares from structured config map
 	for _, mwConfig := range cfg.Middlewares {
-		mwName, ok := mwConfig["name"].(string)
-		if !ok || mwName == "" {
+		mwName := mwConfig.Name
+		if mwName == "" {
 			log.Println("Warning: Middleware configuration missing 'name' field, skipping.")
 			continue
 		}
@@ -58,13 +54,12 @@ func main() {
 			log.Printf("Warning: Middleware '%s' is declared in config but not registered.", mwName)
 			continue
 		}
-		// Pass the specific config block, router, and registry to the factory
-		middlewares = append(middlewares, factory(mwConfig, api, registry))
+		// Pass the specific config block and router to the factory
+		middlewares = append(middlewares, factory(mwConfig, api))
 	}
 
 	// Chain the middlewares around the base service.
 	finalService := middleware.Chain(baseRouterService, middlewares...)
-	registry.Register("QueryService", finalService)
 
 	queryHandler := handler.NewQueryHandler(finalService)
 

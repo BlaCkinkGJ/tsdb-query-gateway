@@ -5,10 +5,15 @@ import (
 	"os"
 )
 
+type MiddlewareConfig struct {
+	Name   string          `json:"name"`
+	Config json.RawMessage `json:"config,omitempty"`
+}
+
 type Config struct {
-	Port          int                      `json:"port"`
-	PromEndpoints []string                 `json:"prom_endpoints"`
-	Middlewares   []map[string]interface{} `json:"middlewares,omitempty"`
+	Port          int                `json:"port"`
+	PromEndpoints []string           `json:"prom_endpoints"`
+	Middlewares   []MiddlewareConfig `json:"middlewares,omitempty"`
 }
 
 func LoadConfig(path string) (*Config, error) {

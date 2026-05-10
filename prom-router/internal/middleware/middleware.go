@@ -1,9 +1,9 @@
 package middleware
 
 import (
-	"log"
+	"fmt"
 
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/discovery"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/config"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -14,18 +14,19 @@ type Middleware interface {
 }
 
 // Factory defines a constructor for a Middleware.
-// It accepts its specific config block, a Gin RouterGroup, and the service registry.
-type Factory func(mwConfig map[string]interface{}, router *gin.RouterGroup, reg discovery.Registry) Middleware
+// It accepts its specific config block and a Gin RouterGroup.
+type Factory func(mwConfig config.MiddlewareConfig, router *gin.RouterGroup) Middleware
 
 var registry = make(map[string]Factory)
 
 // Register adds a new Middleware factory to the registry.
 // This is typically called in an init() function.
-func Register(name string, factory Factory) {
+func Register(name string, factory Factory) error {
 	if _, exists := registry[name]; exists {
-		log.Fatalf("Middleware factory '%s' is already registered", name)
+		return fmt.Errorf("middleware factory %q already registered", name)
 	}
 	registry[name] = factory
+	return nil
 }
 
 // Get retrieves a middleware factory from the registry by name.

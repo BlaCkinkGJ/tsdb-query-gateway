@@ -10,27 +10,40 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/discovery"
+	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/config"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 func init() {
-	Register("ai", func(mwConfig map[string]interface{}, router *gin.RouterGroup, reg discovery.Registry) Middleware {
-		var endpoint string
-		if ep, ok := mwConfig["endpoint"].(string); ok {
-			endpoint = ep
-		} else {
+	_ = Register("ai", func(mwConfig config.MiddlewareConfig, router *gin.RouterGroup) Middleware {
+		var config struct {
+			Endpoint string `json:"endpoint"`
+			Timeout  int    `json:"timeout,omitempty"` // Example of adding configurable timeout
+		}
+
+		if len(mwConfig.Config) > 0 {
+			if err := json.Unmarshal(mwConfig.Config, &config); err != nil {
+				log.Printf("AI Middleware config unmarshal error: %v", err)
+			}
+		}
+
+		if config.Endpoint == "" {
 			log.Println("AI Middleware enabled but 'endpoint' is missing in config")
 		}
 
+		timeout := 60 * time.Second
+		if config.Timeout > 0 {
+			timeout = time.Duration(config.Timeout) * time.Second
+		}
+
 		httpClient := &http.Client{
-			Timeout: 60 * time.Second,
+			Timeout: timeout,
 		}
 
 		return &aiMiddlewareFactory{
-			aiEndpoint: endpoint,
+			aiEndpoint: config.Endpoint,
 			httpClient: httpClient,
 		}
 	})
@@ -87,7 +100,7 @@ func (m *aiMiddleware) processAI(ctx context.Context, data *models.PromResponse)
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", m.aiEndpoint, bytes.NewReader(payloadBytes))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, m.aiEndpoint, bytes.NewReader(payloadBytes))
 	if err != nil {
 		return nil, err
 	}
