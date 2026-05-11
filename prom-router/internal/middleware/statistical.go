@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"log"
 
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/config"
 	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
@@ -10,12 +11,14 @@ import (
 )
 
 func init() {
-	_ = Register("statistical", func(mwConfig config.MiddlewareConfig, router *gin.RouterGroup) Middleware {
+	if err := Register("statistical", func(mwConfig config.MiddlewareConfig, router *gin.RouterGroup) Middleware {
 		// Example of attaching a specific route for statistical configuration
 		// router.GET("/statistical/config", func(c *gin.Context) { c.JSON(200, gin.H{"smoothing": true}) })
 
 		return &statisticalMiddlewareFactory{}
-	})
+	}); err != nil {
+		log.Printf("Failed to register statistical middleware: %v", err)
+	}
 }
 
 type statisticalMiddlewareFactory struct{}

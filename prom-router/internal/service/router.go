@@ -48,7 +48,7 @@ func (s *RouterService) Query(ctx context.Context, req models.PromQueryRequest) 
 		return nil, fmt.Errorf("error querying downstream prometheus: %w", err)
 	}
 
-	return s.mergeResults(results), nil
+	return s.mergeResults(results)
 }
 
 // QueryRange implements the QueryService interface.
@@ -76,13 +76,13 @@ func (s *RouterService) QueryRange(ctx context.Context, req models.PromQueryRang
 		return nil, fmt.Errorf("error querying downstream prometheus: %w", err)
 	}
 
-	return s.mergeResults(results), nil
+	return s.mergeResults(results)
 }
 
 // mergeResults merges the data from multiple Prometheus responses.
-func (s *RouterService) mergeResults(results []*models.PromResponse) *models.PromResponse {
+func (s *RouterService) mergeResults(results []*models.PromResponse) (*models.PromResponse, error) {
 	if len(results) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	var mergedResultType string
@@ -110,18 +110,15 @@ func (s *RouterService) mergeResults(results []*models.PromResponse) *models.Pro
 		// Fallback to the first non-nil result if any
 		for _, r := range results {
 			if r != nil {
-				return r
+				return r, nil
 			}
 		}
-		return nil
+		return nil, nil
 	}
 
 	mergedRaw, err := json.Marshal(allMetrics)
 	if err != nil {
-		// As this is a helper function not returning error originally,
-		// if merging fails we fallback to returning nil for safety.
-		// A proper architectural fix would involve changing mergeResults signature.
-		return nil
+		return nil, fmt.Errorf("failed to marshal merged results: %w", err)
 	}
 
 	return &models.PromResponse{
@@ -130,5 +127,5 @@ func (s *RouterService) mergeResults(results []*models.PromResponse) *models.Pro
 			ResultType: mergedResultType,
 			Result:     mergedRaw,
 		},
-	}
+	}, nil
 }

@@ -17,7 +17,7 @@ import (
 )
 
 func init() {
-	_ = Register("ai", func(mwConfig config.MiddlewareConfig, router *gin.RouterGroup) Middleware {
+	if err := Register("ai", func(mwConfig config.MiddlewareConfig, router *gin.RouterGroup) Middleware {
 		var config struct {
 			Endpoint string `json:"endpoint"`
 			Timeout  int    `json:"timeout,omitempty"` // Example of adding configurable timeout
@@ -46,7 +46,9 @@ func init() {
 			aiEndpoint: config.Endpoint,
 			httpClient: httpClient,
 		}
-	})
+	}); err != nil {
+		log.Printf("Failed to register AI middleware: %v", err)
+	}
 }
 
 type aiMiddlewareFactory struct {
@@ -114,7 +116,10 @@ func (m *aiMiddleware) processAI(ctx context.Context, data *models.PromResponse)
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		// Read up to 1024 bytes to avoid huge error strings.
-		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		bodyBytes, readErr := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		if readErr != nil {
+			return nil, fmt.Errorf("unexpected status code: %d, failed to read body: %w", resp.StatusCode, readErr)
+		}
 		return nil, fmt.Errorf("AI endpoint error: status %d, body: %s", resp.StatusCode, string(bodyBytes))
 	}
 
