@@ -9,7 +9,7 @@ import (
 )
 
 type mockPromClient struct {
-	result []interface{}
+	result []json.RawMessage
 }
 
 func (m *mockPromClient) Query(ctx context.Context, targetURL string, req models.PromQueryRequest) (*models.PromResponse, error) {
@@ -29,8 +29,8 @@ func (m *mockPromClient) QueryRange(ctx context.Context, targetURL string, req m
 
 func TestRouterService_Query(t *testing.T) {
 	mockClient := &mockPromClient{
-		result: []interface{}{
-			map[string]interface{}{"metric": map[string]string{"__name__": "up"}},
+		result: []json.RawMessage{
+			json.RawMessage(`{"metric": {"__name__": "up"}}`),
 		},
 	}
 
@@ -47,7 +47,7 @@ func TestRouterService_Query(t *testing.T) {
 		t.Errorf("expected success status, got %s", res.Status)
 	}
 
-	var parsedResult []interface{}
+	var parsedResult []json.RawMessage
 	err = json.Unmarshal(res.Data.Result, &parsedResult)
 	if err != nil {
 		t.Fatalf("failed to unmarshal result: %v", err)

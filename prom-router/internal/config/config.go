@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 )
 
@@ -35,6 +36,13 @@ func LoadConfig(path string) (*Config, error) {
 	var cfg Config
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return nil, err
+	}
+
+	if cfg.Port <= 0 {
+		return nil, fmt.Errorf("invalid port: %d", cfg.Port)
+	}
+	if len(cfg.PromEndpoints) == 0 {
+		return nil, fmt.Errorf("prom_endpoints cannot be empty")
 	}
 
 	return &cfg, nil
