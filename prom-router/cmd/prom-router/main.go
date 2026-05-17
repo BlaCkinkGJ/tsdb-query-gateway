@@ -45,14 +45,12 @@ func main() {
 	for _, mwConfig := range cfg.Middlewares {
 		mwName := mwConfig.Name
 		if mwName == "" {
-			log.Println("Warning: Middleware configuration missing 'name' field, skipping.")
-			continue
+			log.Fatalf("Fatal: Middleware configuration missing 'name' field.")
 		}
 
 		factory := middleware.Get(mwName)
 		if factory == nil {
-			log.Printf("Warning: Middleware '%s' is declared in config but not registered.", mwName)
-			continue
+			log.Fatalf("Fatal: Middleware '%s' is declared in config but not registered.", mwName)
 		}
 		// Pass the specific config block and router to the factory
 		middlewares = append(middlewares, factory(mwConfig, api))

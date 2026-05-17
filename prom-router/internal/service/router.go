@@ -95,15 +95,16 @@ func (s *RouterService) mergeResults(results []*models.PromResponse) (*models.Pr
 
 		if mergedResultType == "" {
 			mergedResultType = res.Data.ResultType
+		} else if mergedResultType != res.Data.ResultType {
+			return nil, fmt.Errorf("inconsistent result types in downstream responses: expected %q, got %q", mergedResultType, res.Data.ResultType)
 		}
 
 		var metrics []json.RawMessage
-		if err := json.Unmarshal(res.Data.Result, &metrics); err == nil {
-			allMetrics = append(allMetrics, metrics...)
-		} else {
-			// If it's a single object rather than an array, just append it
-			allMetrics = append(allMetrics, res.Data.Result)
+		if err := json.Unmarshal(res.Data.Result, &metrics); err != nil {
+			// If unmarshaling fails entirely, fail the merge
+			return nil, fmt.Errorf("failed to unmarshal downstream result payload: %w", err)
 		}
+		allMetrics = append(allMetrics, metrics...)
 	}
 
 	if mergedResultType == "" {

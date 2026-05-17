@@ -25,12 +25,12 @@ func init() {
 
 		if len(mwConfig.Config) > 0 {
 			if err := json.Unmarshal(mwConfig.Config, &config); err != nil {
-				log.Printf("AI Middleware config unmarshal error: %v", err)
+				log.Fatalf("Fatal: AI Middleware config unmarshal error: %v", err)
 			}
 		}
 
 		if config.Endpoint == "" {
-			log.Println("AI Middleware enabled but 'endpoint' is missing in config")
+			log.Fatalf("Fatal: AI Middleware enabled but 'endpoint' is missing in config")
 		}
 
 		timeout := 60 * time.Second
