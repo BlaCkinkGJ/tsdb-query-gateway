@@ -68,14 +68,14 @@ jobs:
 
         # Wait for the router to be ready
         for i in {1..30}; do
-          if curl -sf http://localhost:8080/api/v1/query >/dev/null 2>&1; then
+          if curl -sf http://localhost:8080/api/v1/query?query=up >/dev/null 2>&1; then
             break
           fi
           sleep 1
         done
 
         # Verify readiness check
-        if ! curl -sf http://localhost:8080/api/v1/query >/dev/null 2>&1; then
+        if ! curl -sf http://localhost:8080/api/v1/query?query=up >/dev/null 2>&1; then
           echo "Router failed to start within 30s"
           exit 1
         fi
