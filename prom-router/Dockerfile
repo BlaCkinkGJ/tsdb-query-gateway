@@ -27,10 +27,13 @@ RUN apk --no-cache add ca-certificates
 
 # Create a non-root user
 RUN adduser -D -u 1000 appuser
-USER appuser
 
 # Copy the binary from the builder stage
 COPY --from=builder /app/bin/prom-router /app/prom-router
+
+# Explicitly transfer ownership
+RUN chown appuser:appuser /app/prom-router
+USER appuser
 
 EXPOSE 8080
 

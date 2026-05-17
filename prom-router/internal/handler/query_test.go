@@ -31,7 +31,7 @@ func TestHandleQuery(t *testing.T) {
 
 	// Test missing query
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/api/v1/query", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/query", nil)
 	router.ServeHTTP(w, req)
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("expected 400 Bad Request for missing query, got %d", w.Code)
@@ -39,7 +39,7 @@ func TestHandleQuery(t *testing.T) {
 
 	// Test successful query
 	w2 := httptest.NewRecorder()
-	req2, _ := http.NewRequest("GET", "/api/v1/query?query=up", nil)
+	req2, _ := http.NewRequest(http.MethodGet, "/api/v1/query?query=up", nil)
 	router.ServeHTTP(w2, req2)
 	if w2.Code != http.StatusOK {
 		t.Errorf("expected 200 OK, got %d", w2.Code)

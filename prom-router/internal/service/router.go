@@ -108,13 +108,13 @@ func (s *RouterService) mergeResults(results []*models.PromResponse) (*models.Pr
 	}
 
 	if mergedResultType == "" {
-		// Fallback to the first non-nil result if any
+		// Fallback to the first non-nil successful result if any
 		for _, r := range results {
-			if r != nil {
+			if r != nil && r.Status == "success" {
 				return r, nil
 			}
 		}
-		return nil, nil
+		return nil, fmt.Errorf("all downstream queries failed to produce valid result data")
 	}
 
 	mergedRaw, err := json.Marshal(allMetrics)
