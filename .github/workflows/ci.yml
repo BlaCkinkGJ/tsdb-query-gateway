@@ -1,0 +1,93 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      prometheus:
+        image: prom/prometheus:latest
+        ports:
+          - 9090:9090
+        options: >-
+          --health-cmd="wget -qO- http://localhost:9090/-/healthy"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    defaults:
+      run:
+        working-directory: ./prom-router
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24.x'
+
+    - name: Install dependencies and tools
+      run: |
+        go mod download
+        go install golang.org/x/tools/cmd/goimports@latest
+
+    - name: Run goimports
+      run: make goimports
+
+    - name: Run fmt
+      run: make fmt
+
+    - name: Run vet
+      run: make vet
+
+    - name: Run Tests
+      run: make test
+
+    - name: Build Binary
+      run: make build
+
+    - name: Run Integration Test
+      run: |
+        # Create a dummy config for the router to point to the local prometheus
+        echo '{"port": 8080, "prom_endpoints": ["http://localhost:9090"]}' > config.json
+
+        # Start the router in the background
+        ./bin/prom-router -config config.json &
+        ROUTER_PID=$!
+
+        # Setup trap to ensure process is killed when the script exits
+        trap "kill $ROUTER_PID 2>/dev/null || true" EXIT
+
+        # Wait for the router to be ready
+        for i in {1..30}; do
+          if curl -sf http://localhost:8080/api/v1/query?query=up >/dev/null 2>&1; then
+            break
+          fi
+          sleep 1
+        done
+
+        # Verify readiness check
+        if ! curl -sf http://localhost:8080/api/v1/query?query=up >/dev/null 2>&1; then
+          echo "Router failed to start within 30s"
+          exit 1
+        fi
+
+        # Make a curl request to the router mapping to prometheus
+        RESPONSE=$(curl -s "http://localhost:8080/api/v1/query?query=up")
+        echo "Response: $RESPONSE"
+
+        # Check if the response contains success status
+        if echo "$RESPONSE" | grep -q '"status":"success"'; then
+          echo "Integration Test Passed"
+        else
+          echo "Integration Test Failed"
+          exit 1
+        fi
