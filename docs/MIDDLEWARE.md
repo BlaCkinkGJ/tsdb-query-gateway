@@ -65,6 +65,12 @@ func (LoggingMiddleware) Wrap(next service.QueryService) service.QueryService {
 2. Register the factory in `init()`:
 
 ```go
+import (
+    "github.com/BlaCkinkGJ/tsdb-query-gateway/internal/config"
+    "github.com/BlaCkinkGJ/tsdb-query-gateway/internal/middleware"
+    "github.com/gin-gonic/gin"
+)
+
 func init() {
     middleware.Register("logging", func(mwConfig config.MiddlewareConfig, router *gin.RouterGroup) middleware.Middleware {
         return LoggingMiddleware{}

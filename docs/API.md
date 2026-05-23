@@ -28,8 +28,8 @@ curl "http://localhost:8080/api/v1/query?query=up"
   "data": {
     "resultType": "vector",
     "result": [
-      {"metric": {"__name__": "up", "instance": "localhost:9090"}, "value": [1716000000, "1"]},
-      {"metric": {"__name__": "up", "instance": "localhost:9091"}, "value": [1716000000, "1"]}
+      {"metric": {"__name__": "up"}, "value": [1716000000, "1"]},
+      {"metric": {"__name__": "up"}, "value": [1716000000, "1"]}
     ]
   }
 }

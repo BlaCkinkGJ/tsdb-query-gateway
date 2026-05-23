@@ -93,7 +93,7 @@ services:
 
 The gateway exposes a simple readiness probe at `/api/v1/query?query=up` (standard Prometheus API). A successful response with HTTP 200 indicates the gateway is operational.
 
-> **Warning:** Because the gateway fails fast if any downstream Prometheus is unavailable, using a functional query as a readiness probe may cause Kubernetes to mark the gateway as unready when a downstream instance is down. Consider implementing a dedicated `/health` endpoint for production deployments.
+> **Warning:** Using a functional query as a readiness probe executes against all downstream Prometheus instances on every probe, generating unnecessary load. Additionally, because the gateway fails fast if any downstream is unavailable, Kubernetes may mark the gateway as unready when a downstream instance is down. Consider implementing a dedicated `/health` or `/ready` endpoint for production deployments.
 
 ## Troubleshooting
 
