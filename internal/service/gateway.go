@@ -112,6 +112,8 @@ func (s *GatewayService) mergeResults(results []*models.PromResponse) (*models.P
 		}
 
 		if len(res.Data.Result) == 0 {
+			// Empty result ("[]" in JSON) is length 2 for raw message bytes.
+			// Only skip truly missing/null result fields, not empty arrays.
 			continue
 		}
 
@@ -147,8 +149,9 @@ func (s *GatewayService) mergeResults(results []*models.PromResponse) (*models.P
 		// Fallback to the first non-nil successful result if any
 		for _, r := range results {
 			if r != nil && r.Status == "success" {
-				r.Warnings = allWarnings
-				return r, nil
+				resp := *r
+				resp.Warnings = allWarnings
+				return &resp, nil
 			}
 		}
 		return nil, fmt.Errorf("all downstream queries failed to produce valid result data")
@@ -157,8 +160,9 @@ func (s *GatewayService) mergeResults(results []*models.PromResponse) (*models.P
 	// For scalar/string, return the first valid result with all collected warnings.
 	if mergedResultType == "scalar" || mergedResultType == "string" {
 		if firstScalarString != nil {
-			firstScalarString.Warnings = allWarnings
-			return firstScalarString, nil
+			resp := *firstScalarString
+			resp.Warnings = allWarnings
+			return &resp, nil
 		}
 	}
 
