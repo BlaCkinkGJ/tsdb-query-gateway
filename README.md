@@ -97,4 +97,4 @@ docker run -p 8080:8080 -v $(pwd)/config.json:/app/config.json tsdb-query-gatewa
 
 ## License
 
-MIT
+Apache License 2.0
