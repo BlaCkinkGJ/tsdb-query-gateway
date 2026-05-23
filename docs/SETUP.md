@@ -99,4 +99,4 @@ The gateway exposes a simple readiness probe at `/api/v1/query?query=up` (standa
 
 - **"no prometheus endpoints configured"** — `prom_endpoints` is missing or empty in config
 - **"middleware ... not registered"** — Declared middleware name does not match any registered factory. Check `middleware.Register` calls.
-- **Downstream timeout** — Use less complex queries. (Note: the gateway's 30s HTTP timeout is hardcoded in `cmd/main.go`; increasing it requires a code change and rebuild.)
+- **Downstream timeout** — Use less complex queries. (Note: the gateway's 30s HTTP timeout default is defined in `internal/client/prometheus.go` and triggered from `cmd/main.go`; increasing it requires a code change and rebuild.)

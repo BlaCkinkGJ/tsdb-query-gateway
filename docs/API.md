@@ -127,5 +127,5 @@ If the downstream returns an unstructured error, the gateway falls back to HTTP 
 When querying multiple endpoints:
 
 - **`vector`/`matrix`**: Results are concatenated. Two endpoints each returning one metric produce a merged response with two metrics.
-- **`scalar`/`string`**: Only the first valid result is returned (these are singleton values, not mergeable).
+- **`scalar`/`string`**: Only the first non-empty successful result is returned (these are singleton values, not mergeable). All downstream responses must have the same `resultType`; inconsistent types will result in an error.
 - **Warnings**: Collected from all endpoints, deduplicated, and returned in the merged response.
