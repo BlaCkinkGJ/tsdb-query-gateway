@@ -28,7 +28,6 @@ func (h *QueryHandler) HandleQuery(c *gin.Context) {
 		Timeout: c.Query("timeout"),
 	}
 
-	// Also support form data if necessary
 	if req.Query == "" {
 		req.Query = c.PostForm("query")
 		req.Time = c.PostForm("time")
@@ -42,15 +41,7 @@ func (h *QueryHandler) HandleQuery(c *gin.Context) {
 
 	res, err := h.queryService.Query(c.Request.Context(), req)
 	if err != nil {
-		log.Printf("query error: %v", err)
-		statusCode := http.StatusInternalServerError
-		errorType := "server_error"
-		var downstreamErr *client.DownstreamError
-		if errors.As(err, &downstreamErr) {
-			statusCode = downstreamErr.StatusCode
-			errorType = downstreamErr.ErrorType
-		}
-		c.JSON(statusCode, gin.H{"status": "error", "errorType": errorType, "error": err.Error()})
+		writeErrorResponse(c, "query", err)
 		return
 	}
 
@@ -81,19 +72,25 @@ func (h *QueryHandler) HandleQueryRange(c *gin.Context) {
 
 	res, err := h.queryService.QueryRange(c.Request.Context(), req)
 	if err != nil {
-		log.Printf("query_range error: %v", err)
-		statusCode := http.StatusInternalServerError
-		errorType := "server_error"
-		var downstreamErr *client.DownstreamError
-		if errors.As(err, &downstreamErr) {
-			statusCode = downstreamErr.StatusCode
-			errorType = downstreamErr.ErrorType
-		}
-		c.JSON(statusCode, gin.H{"status": "error", "errorType": errorType, "error": err.Error()})
+		writeErrorResponse(c, "query_range", err)
 		return
 	}
 
 	c.JSON(http.StatusOK, res)
+}
+
+func writeErrorResponse(c *gin.Context, logPrefix string, err error) {
+	log.Printf("%s error: %v", logPrefix, err)
+	statusCode := http.StatusInternalServerError
+	errorType := "server_error"
+	msg := err.Error()
+	var downstreamErr *client.DownstreamError
+	if errors.As(err, &downstreamErr) {
+		statusCode = downstreamErr.StatusCode
+		errorType = downstreamErr.ErrorType
+		msg = downstreamErr.Message
+	}
+	c.JSON(statusCode, gin.H{"status": "error", "errorType": errorType, "error": msg})
 }
 
 func (h *QueryHandler) RegisterRoutes(router *gin.RouterGroup) {

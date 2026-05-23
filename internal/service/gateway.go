@@ -91,6 +91,7 @@ func (s *GatewayService) mergeResults(results []*models.PromResponse) (*models.P
 	allMetrics := []json.RawMessage{}
 	seenWarnings := make(map[string]struct{})
 	var allWarnings []string
+	var firstScalarString *models.PromResponse
 
 	addWarning := func(w string) {
 		if _, ok := seenWarnings[w]; !ok {
@@ -122,10 +123,13 @@ func (s *GatewayService) mergeResults(results []*models.PromResponse) (*models.P
 
 		// Scalar and string result types are [timestamp, "value"] tuples,
 		// not a list of metric objects. Merging across instances is not
-		// meaningful for these types — return the first valid result as-is.
+		// meaningful for these types — remember the first valid result but
+		// continue the loop to gather warnings and validate consistency.
 		if mergedResultType == "scalar" || mergedResultType == "string" {
-			res.Warnings = allWarnings
-			return res, nil
+			if firstScalarString == nil {
+				firstScalarString = res
+			}
+			continue
 		}
 
 		// For vector, matrix, and unknown types, assume a concatenatable list of metrics.
@@ -146,6 +150,14 @@ func (s *GatewayService) mergeResults(results []*models.PromResponse) (*models.P
 			}
 		}
 		return nil, fmt.Errorf("all downstream queries failed to produce valid result data")
+	}
+
+	// For scalar/string, return the first valid result with all collected warnings.
+	if mergedResultType == "scalar" || mergedResultType == "string" {
+		if firstScalarString != nil {
+			firstScalarString.Warnings = allWarnings
+			return firstScalarString, nil
+		}
 	}
 
 	mergedRaw, err := json.Marshal(allMetrics)

@@ -133,6 +133,10 @@ func TestHandleQuery_DownstreamErrorStatusCode(t *testing.T) {
 	if !strings.Contains(body, "bad_data") {
 		t.Errorf("expected errorType bad_data in response, got: %s", body)
 	}
+	// The error field should contain only the message, not the "downstream error (400):" prefix
+	if strings.Contains(body, "downstream error") {
+		t.Errorf("error should not contain redundant prefix, got: %s", body)
+	}
 	if !strings.Contains(body, "invalid query") {
 		t.Errorf("expected downstream error message, got: %s", body)
 	}
