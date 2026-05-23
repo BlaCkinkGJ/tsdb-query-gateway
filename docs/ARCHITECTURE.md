@@ -93,7 +93,7 @@ The `QueryHandler` uses `errors.As` to detect downstream errors and propagate th
 
 ## Data Flow
 
-1. Client sends `/api/v1/query?q=up`
+1. Client sends `/api/v1/query?query=up`
 2. `QueryHandler.HandleQuery` builds `PromQueryRequest`
 3. Middleware chain processes request (e.g., AI enrichment)
 4. `GatewayService.Query` fans out to all Prometheus endpoints

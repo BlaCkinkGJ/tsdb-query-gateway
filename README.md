@@ -3,7 +3,7 @@
 A lightweight HTTP gateway service that routes and merges Prometheus queries across multiple downstream Prometheus instances. It provides a single endpoint for querying distributed time-series databases while supporting a pluggable middleware system for extensibility.
 
 [![Go](https://img.shields.io/badge/go-1.24-blue)](https://golang.org)
-[![License](https://img.shields.io/badge/license-MIT-green)]()
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 ## What is this?
 
