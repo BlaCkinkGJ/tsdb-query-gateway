@@ -17,8 +17,10 @@ type GatewayService struct {
 }
 
 func NewGatewayService(promEndpoints []string, promClient client.PrometheusClient) *GatewayService {
+	endpoints := make([]string, len(promEndpoints))
+	copy(endpoints, promEndpoints)
 	return &GatewayService{
-		promEndpoints: promEndpoints,
+		promEndpoints: endpoints,
 		promClient:    promClient,
 	}
 }
@@ -86,12 +88,16 @@ func (s *GatewayService) mergeResults(results []*models.PromResponse) (*models.P
 	}
 
 	var mergedResultType string
-	var allMetrics []json.RawMessage
+	allMetrics := []json.RawMessage{}
+	var allWarnings []string
 
 	for _, res := range results {
 		if res == nil || res.Status != "success" || len(res.Data.Result) == 0 {
 			continue
 		}
+
+		// Collect warnings from all downstream responses
+		allWarnings = append(allWarnings, res.Warnings...)
 
 		if mergedResultType == "" {
 			mergedResultType = res.Data.ResultType
@@ -99,9 +105,17 @@ func (s *GatewayService) mergeResults(results []*models.PromResponse) (*models.P
 			return nil, fmt.Errorf("inconsistent result types in downstream responses: expected %q, got %q", mergedResultType, res.Data.ResultType)
 		}
 
+		// Scalar and string result types are [timestamp, "value"] tuples,
+		// not a list of metric objects. Merging across instances is not
+		// meaningful for these types — return the first valid result as-is.
+		if mergedResultType == "scalar" || mergedResultType == "string" {
+			return res, nil
+		}
+
+		// For vector, matrix, and unknown types, assume a concatenatable list of metrics.
 		var metrics []json.RawMessage
 		if err := json.Unmarshal(res.Data.Result, &metrics); err != nil {
-			// If unmarshaling fails entirely, fail the merge
+			// If the payload isn't a list (e.g., a malformed scalar/string), fail the merge.
 			return nil, fmt.Errorf("failed to unmarshal downstream result payload: %w", err)
 		}
 		allMetrics = append(allMetrics, metrics...)
@@ -122,11 +136,15 @@ func (s *GatewayService) mergeResults(results []*models.PromResponse) (*models.P
 		return nil, fmt.Errorf("failed to marshal merged results: %w", err)
 	}
 
-	return &models.PromResponse{
+	resp := &models.PromResponse{
 		Status: "success",
 		Data: models.PromData{
 			ResultType: mergedResultType,
 			Result:     mergedRaw,
 		},
-	}, nil
+	}
+	if len(allWarnings) > 0 {
+		resp.Warnings = allWarnings
+	}
+	return resp, nil
 }

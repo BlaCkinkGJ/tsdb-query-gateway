@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/BlaCkinkGJ/tsdb-query-gateway/pkg/models"
@@ -39,7 +40,8 @@ func (h *QueryHandler) HandleQuery(c *gin.Context) {
 
 	res, err := h.queryService.Query(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "errorType": "server_error", "error": err.Error()})
+		log.Printf("query error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "errorType": "server_error", "error": "internal server error"})
 		return
 	}
 
@@ -70,7 +72,8 @@ func (h *QueryHandler) HandleQueryRange(c *gin.Context) {
 
 	res, err := h.queryService.QueryRange(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "errorType": "server_error", "error": err.Error()})
+		log.Printf("query_range error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "errorType": "server_error", "error": "internal server error"})
 		return
 	}
 

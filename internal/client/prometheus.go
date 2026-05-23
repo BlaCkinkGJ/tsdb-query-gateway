@@ -96,10 +96,15 @@ func (c *prometheusClientImpl) doRequest(req *http.Request) (*models.PromRespons
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		// Read up to 1024 bytes to avoid huge error strings.
-		bodyBytes, readErr := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		// Read up to 4096 bytes to parse structured error response.
+		bodyBytes, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		if readErr != nil {
 			return nil, fmt.Errorf("unexpected status code: %d, failed to read body: %w", resp.StatusCode, readErr)
+		}
+		// Attempt to decode as a Prometheus API error response.
+		var promResp models.PromResponse
+		if err := json.Unmarshal(bodyBytes, &promResp); err == nil && promResp.Error != "" {
+			return nil, fmt.Errorf("prometheus error (status %d): %s - %s", resp.StatusCode, promResp.ErrorType, promResp.Error)
 		}
 		return nil, fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(bodyBytes))
 	}

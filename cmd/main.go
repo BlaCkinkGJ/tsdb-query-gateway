@@ -7,8 +7,8 @@ import (
 
 	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/client"
 	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/config"
-	"github.com/BlaCkinkGJ/tsdb-query-gateway/pkg/handler"
-	"github.com/BlaCkinkGJ/tsdb-query-gateway/pkg/middleware"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/handler"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/middleware"
 	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/service"
 	"github.com/gin-gonic/gin"
 )
