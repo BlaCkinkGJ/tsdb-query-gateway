@@ -61,7 +61,7 @@ This enables:
 
 ### 2. Parallel Execution
 
-`GatewayService.Query` and `QueryRange` use `errgroup.WithContext` to fan out requests to all configured Prometheus endpoints concurrently. If any request fails, the entire operation fails fast.
+`GatewayService.Query` and `QueryRange` use `errgroup.WithContext` to fan out requests to all configured Prometheus endpoints concurrently. The current implementation follows a **fail-fast** policy: if any downstream request fails, the entire query returns an error. This ensures data completeness but reduces gateway availability compared to a partial-results strategy.
 
 ### 3. Result Type Handling
 
