@@ -7,8 +7,8 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/client"
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/client"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/models"
 )
 
 type RouterService struct {

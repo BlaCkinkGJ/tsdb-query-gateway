@@ -1,11 +1,11 @@
 .PHONY: all build test fmt vet goimports clean run
 
-BINARY_NAME=prom-router
+BINARY_NAME=query-gateway
 
 all: goimports fmt vet build test
 
 build:
-	go build -o bin/$(BINARY_NAME) ./cmd/prom-router
+	go build -o bin/$(BINARY_NAME) ./cmd
 
 test:
 	go test -v -race ./...

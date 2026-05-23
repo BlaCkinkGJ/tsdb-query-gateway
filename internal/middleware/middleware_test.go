@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/models"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/service"
 )
 
 type dummyService struct {

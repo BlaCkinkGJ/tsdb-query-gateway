@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/client"
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/config"
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/handler"
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/middleware"
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/client"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/config"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/handler"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/middleware"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/service"
 	"github.com/gin-gonic/gin"
 )
 

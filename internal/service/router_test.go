@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/models"
 )
 
 type mockPromClient struct {

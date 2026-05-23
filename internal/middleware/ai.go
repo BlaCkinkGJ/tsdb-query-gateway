@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/config"
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/config"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/models"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
