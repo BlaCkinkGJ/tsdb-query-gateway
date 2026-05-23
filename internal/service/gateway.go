@@ -89,15 +89,30 @@ func (s *GatewayService) mergeResults(results []*models.PromResponse) (*models.P
 
 	var mergedResultType string
 	allMetrics := []json.RawMessage{}
+	seenWarnings := make(map[string]struct{})
 	var allWarnings []string
 
+	addWarning := func(w string) {
+		if _, ok := seenWarnings[w]; !ok {
+			seenWarnings[w] = struct{}{}
+			allWarnings = append(allWarnings, w)
+		}
+	}
+
 	for _, res := range results {
-		if res == nil || res.Status != "success" || len(res.Data.Result) == 0 {
+		if res == nil || res.Status != "success" {
 			continue
 		}
 
-		// Collect warnings from all downstream responses
-		allWarnings = append(allWarnings, res.Warnings...)
+		// Collect warnings from ALL successful downstream responses,
+		// even those with empty result data.
+		for _, w := range res.Warnings {
+			addWarning(w)
+		}
+
+		if len(res.Data.Result) == 0 {
+			continue
+		}
 
 		if mergedResultType == "" {
 			mergedResultType = res.Data.ResultType
@@ -126,6 +141,7 @@ func (s *GatewayService) mergeResults(results []*models.PromResponse) (*models.P
 		// Fallback to the first non-nil successful result if any
 		for _, r := range results {
 			if r != nil && r.Status == "success" {
+				r.Warnings = allWarnings
 				return r, nil
 			}
 		}

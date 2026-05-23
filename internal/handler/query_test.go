@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/client"
 	"github.com/BlaCkinkGJ/tsdb-query-gateway/pkg/models"
 	"github.com/gin-gonic/gin"
 )
@@ -28,6 +29,15 @@ func (s *mockQueryServiceError) Query(ctx context.Context, req models.PromQueryR
 }
 func (s *mockQueryServiceError) QueryRange(ctx context.Context, req models.PromQueryRangeRequest) (*models.PromResponse, error) {
 	return nil, fmt.Errorf("bad_data: invalid parameter \"query\": 1:1: parse error: no expression found in input")
+}
+
+type mockQueryServiceDownstreamError struct{}
+
+func (s *mockQueryServiceDownstreamError) Query(ctx context.Context, req models.PromQueryRequest) (*models.PromResponse, error) {
+	return nil, &client.DownstreamError{StatusCode: http.StatusBadRequest, ErrorType: "bad_data", Message: "invalid query"}
+}
+func (s *mockQueryServiceDownstreamError) QueryRange(ctx context.Context, req models.PromQueryRangeRequest) (*models.PromResponse, error) {
+	return nil, &client.DownstreamError{StatusCode: http.StatusBadRequest, ErrorType: "bad_data", Message: "invalid query"}
 }
 
 func TestHandleQuery(t *testing.T) {
@@ -99,5 +109,31 @@ func TestHandleQueryRange_ErrorResponse(t *testing.T) {
 	body := w.Body.String()
 	if !strings.Contains(body, "parse error") {
 		t.Errorf("expected downstream error to be propagated, got: %s", body)
+	}
+}
+
+func TestHandleQuery_DownstreamErrorStatusCode(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	h := NewQueryHandler(&mockQueryServiceDownstreamError{})
+
+	router := gin.Default()
+	api := router.Group("/api/v1")
+	h.RegisterRoutes(api)
+
+	// Downstream 400 bad_data should be propagated as 400, not masked as 500
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/query?query=up", nil)
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 Bad Request for downstream bad_data, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "bad_data") {
+		t.Errorf("expected errorType bad_data in response, got: %s", body)
+	}
+	if !strings.Contains(body, "invalid query") {
+		t.Errorf("expected downstream error message, got: %s", body)
 	}
 }

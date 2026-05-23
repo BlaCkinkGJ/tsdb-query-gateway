@@ -12,6 +12,18 @@ import (
 	"github.com/BlaCkinkGJ/tsdb-query-gateway/pkg/models"
 )
 
+// DownstreamError carries the HTTP status code and structured error fields
+// from a non-2xx Prometheus API response.
+type DownstreamError struct {
+	StatusCode int
+	ErrorType  string
+	Message    string
+}
+
+func (e *DownstreamError) Error() string {
+	return fmt.Sprintf("downstream error (%d): %s - %s", e.StatusCode, e.ErrorType, e.Message)
+}
+
 type PrometheusClient interface {
 	Query(ctx context.Context, targetURL string, req models.PromQueryRequest) (*models.PromResponse, error)
 	QueryRange(ctx context.Context, targetURL string, req models.PromQueryRangeRequest) (*models.PromResponse, error)
@@ -104,7 +116,11 @@ func (c *prometheusClientImpl) doRequest(req *http.Request) (*models.PromRespons
 		// Attempt to decode as a Prometheus API error response.
 		var promResp models.PromResponse
 		if err := json.Unmarshal(bodyBytes, &promResp); err == nil && promResp.Error != "" {
-			return nil, fmt.Errorf("prometheus error (status %d): %s - %s", resp.StatusCode, promResp.ErrorType, promResp.Error)
+			return nil, &DownstreamError{
+				StatusCode: resp.StatusCode,
+				ErrorType:  promResp.ErrorType,
+				Message:    promResp.Error,
+			}
 		}
 		return nil, fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(bodyBytes))
 	}

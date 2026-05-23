@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"errors"
 	"log"
 	"net/http"
 
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/client"
 	"github.com/BlaCkinkGJ/tsdb-query-gateway/pkg/models"
 	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/service"
 	"github.com/gin-gonic/gin"
@@ -41,7 +43,14 @@ func (h *QueryHandler) HandleQuery(c *gin.Context) {
 	res, err := h.queryService.Query(c.Request.Context(), req)
 	if err != nil {
 		log.Printf("query error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "errorType": "server_error", "error": err.Error()})
+		statusCode := http.StatusInternalServerError
+		errorType := "server_error"
+		var downstreamErr *client.DownstreamError
+		if errors.As(err, &downstreamErr) {
+			statusCode = downstreamErr.StatusCode
+			errorType = downstreamErr.ErrorType
+		}
+		c.JSON(statusCode, gin.H{"status": "error", "errorType": errorType, "error": err.Error()})
 		return
 	}
 
@@ -73,7 +82,14 @@ func (h *QueryHandler) HandleQueryRange(c *gin.Context) {
 	res, err := h.queryService.QueryRange(c.Request.Context(), req)
 	if err != nil {
 		log.Printf("query_range error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "errorType": "server_error", "error": err.Error()})
+		statusCode := http.StatusInternalServerError
+		errorType := "server_error"
+		var downstreamErr *client.DownstreamError
+		if errors.As(err, &downstreamErr) {
+			statusCode = downstreamErr.StatusCode
+			errorType = downstreamErr.ErrorType
+		}
+		c.JSON(statusCode, gin.H{"status": "error", "errorType": errorType, "error": err.Error()})
 		return
 	}
 
