@@ -56,7 +56,7 @@ Execute a range query against all configured Prometheus endpoints.
 | `start` | string | Yes | Start timestamp |
 | `end` | string | Yes | End timestamp |
 | `step` | string | Yes | Query resolution step width |
-| `timeout` | string | No | Query timeout |
+| `timeout` | string | No | Query timeout. Capped by the gateway's internal 30s HTTP client timeout. |
 
 **Example Request:**
 ```bash
