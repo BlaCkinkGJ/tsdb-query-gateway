@@ -21,7 +21,8 @@ TSDB Query Gateway acts as a **query federation layer** in front of multiple Pro
 - **Warning Aggregation** — collects and deduplicates warnings from all downstream responses
 - **Structured Error Propagation** — forwards Prometheus API errors (`errorType`, `error`) with original HTTP status codes
 - **Pluggable Middleware** — daisy-chain middleware for custom query interception
-- **Production-Ready** — multi-stage Docker build, non-root container, race-safe tests
+
+> **⚠️ Experimental:** This project is currently experimental and not recommended for production use. APIs, configuration formats, and behavior may change without notice.
 
 ## Quick Start
 
