@@ -123,6 +123,10 @@ func (m *mockService) Query(ctx context.Context, req models.PromQueryRequest) (*
     return &models.PromResponse{Status: "success"}, nil
 }
 
+func (m *mockService) QueryRange(ctx context.Context, req models.PromQueryRangeRequest) (*models.PromResponse, error) {
+    return &models.PromResponse{Status: "success"}, nil
+}
+
 func TestLoggingMiddleware(t *testing.T) {
     base := &mockService{}
     mw := LoggingMiddleware{}
