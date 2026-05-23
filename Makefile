@@ -1,6 +1,6 @@
 .PHONY: all build test fmt vet goimports clean run
 
-BINARY_NAME=query-gateway
+BINARY_NAME=tsdb-query-gateway
 
 all: goimports fmt vet build test
 

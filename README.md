@@ -3,7 +3,7 @@
 A lightweight HTTP gateway service that routes and merges Prometheus queries across multiple downstream Prometheus instances. It provides a single endpoint for querying distributed time-series databases while supporting a pluggable middleware system for extensibility.
 
 [![Go](https://img.shields.io/badge/go-1.24-blue)](https://golang.org)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
 ## What is this?
 
@@ -21,7 +21,8 @@ TSDB Query Gateway acts as a **query federation layer** in front of multiple Pro
 - **Warning Aggregation** — collects and deduplicates warnings from all downstream responses
 - **Structured Error Propagation** — forwards Prometheus API errors (`errorType`, `error`) with original HTTP status codes
 - **Pluggable Middleware** — daisy-chain middleware for custom query interception
-- **Production-Ready** — multi-stage Docker build, non-root container, race-safe tests
+
+> **⚠️ Experimental:** This project is currently experimental and not recommended for production use. APIs, configuration formats, and behavior may change without notice.
 
 ## Quick Start
 
@@ -29,13 +30,13 @@ TSDB Query Gateway acts as a **query federation layer** in front of multiple Pro
 # Clone and build
 git clone https://github.com/BlaCkinkGJ/tsdb-query-gateway.git
 cd tsdb-query-gateway
-go build -o bin/query-gateway ./cmd
+go build -o bin/tsdb-query-gateway ./cmd
 
 # Run with default config (port 8080, localhost:9090)
-./bin/query-gateway
+./bin/tsdb-query-gateway
 
 # Or with a custom config
-./bin/query-gateway -config config.json
+./bin/tsdb-query-gateway -config config.json
 ```
 
 ## API
@@ -91,9 +92,9 @@ make run      # Build and run locally
 
 ```bash
 docker build -t tsdb-query-gateway .
-docker run -p 8080:8080 -v $(pwd)/config.json:/app/config.json tsdb-query-gateway /app/query-gateway -config /app/config.json
+docker run -p 8080:8080 -v $(pwd)/config.json:/app/config.json tsdb-query-gateway -config /app/config.json
 ```
 
 ## License
 
-MIT
+Apache License 2.0
