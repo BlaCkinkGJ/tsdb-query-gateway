@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+
+# Build artifacts
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+*.test
+*.out
+coverage.*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# CI (not needed in image)
+.github/
+
+# Documentation
+*.md
+LICENSE
+
+# Local configs
+config.json
+*.yaml
+*.yml
+
+# Docker files (avoid recursive copy issues)
+Dockerfile
+.dockerignore

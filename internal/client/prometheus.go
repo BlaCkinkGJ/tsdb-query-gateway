@@ -9,8 +9,20 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/pkg/models"
 )
+
+// DownstreamError carries the HTTP status code and structured error fields
+// from a non-2xx Prometheus API response.
+type DownstreamError struct {
+	StatusCode int
+	ErrorType  string
+	Message    string
+}
+
+func (e *DownstreamError) Error() string {
+	return fmt.Sprintf("downstream error (%d): %s - %s", e.StatusCode, e.ErrorType, e.Message)
+}
 
 type PrometheusClient interface {
 	Query(ctx context.Context, targetURL string, req models.PromQueryRequest) (*models.PromResponse, error)
@@ -96,10 +108,19 @@ func (c *prometheusClientImpl) doRequest(req *http.Request) (*models.PromRespons
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		// Read up to 1024 bytes to avoid huge error strings.
-		bodyBytes, readErr := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		// Read up to 4096 bytes to parse structured error response.
+		bodyBytes, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		if readErr != nil {
 			return nil, fmt.Errorf("unexpected status code: %d, failed to read body: %w", resp.StatusCode, readErr)
+		}
+		// Attempt to decode as a Prometheus API error response.
+		var promResp models.PromResponse
+		if err := json.Unmarshal(bodyBytes, &promResp); err == nil && promResp.Error != "" {
+			return nil, &DownstreamError{
+				StatusCode: resp.StatusCode,
+				ErrorType:  promResp.ErrorType,
+				Message:    promResp.Error,
+			}
 		}
 		return nil, fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(bodyBytes))
 	}

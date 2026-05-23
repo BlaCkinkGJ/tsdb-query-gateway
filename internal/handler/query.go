@@ -1,10 +1,13 @@
 package handler
 
 import (
+	"errors"
+	"log"
 	"net/http"
 
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/client"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/pkg/models"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,7 +28,6 @@ func (h *QueryHandler) HandleQuery(c *gin.Context) {
 		Timeout: c.Query("timeout"),
 	}
 
-	// Also support form data if necessary
 	if req.Query == "" {
 		req.Query = c.PostForm("query")
 		req.Time = c.PostForm("time")
@@ -39,7 +41,7 @@ func (h *QueryHandler) HandleQuery(c *gin.Context) {
 
 	res, err := h.queryService.Query(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "errorType": "server_error", "error": err.Error()})
+		writeErrorResponse(c, "query", err)
 		return
 	}
 
@@ -70,11 +72,25 @@ func (h *QueryHandler) HandleQueryRange(c *gin.Context) {
 
 	res, err := h.queryService.QueryRange(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "errorType": "server_error", "error": err.Error()})
+		writeErrorResponse(c, "query_range", err)
 		return
 	}
 
 	c.JSON(http.StatusOK, res)
+}
+
+func writeErrorResponse(c *gin.Context, logPrefix string, err error) {
+	log.Printf("%s error: %v", logPrefix, err)
+	statusCode := http.StatusInternalServerError
+	errorType := "server_error"
+	msg := err.Error()
+	var downstreamErr *client.DownstreamError
+	if errors.As(err, &downstreamErr) {
+		statusCode = downstreamErr.StatusCode
+		errorType = downstreamErr.ErrorType
+		msg = downstreamErr.Message
+	}
+	c.JSON(statusCode, gin.H{"status": "error", "errorType": errorType, "error": msg})
 }
 
 func (h *QueryHandler) RegisterRoutes(router *gin.RouterGroup) {

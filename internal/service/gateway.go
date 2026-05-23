@@ -7,24 +7,26 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/client"
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/models"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/client"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/pkg/models"
 )
 
-type RouterService struct {
+type GatewayService struct {
 	promEndpoints []string
 	promClient    client.PrometheusClient
 }
 
-func NewRouterService(promEndpoints []string, promClient client.PrometheusClient) *RouterService {
-	return &RouterService{
-		promEndpoints: promEndpoints,
+func NewGatewayService(promEndpoints []string, promClient client.PrometheusClient) *GatewayService {
+	endpoints := make([]string, len(promEndpoints))
+	copy(endpoints, promEndpoints)
+	return &GatewayService{
+		promEndpoints: endpoints,
 		promClient:    promClient,
 	}
 }
 
 // Query implements the QueryService interface.
-func (s *RouterService) Query(ctx context.Context, req models.PromQueryRequest) (*models.PromResponse, error) {
+func (s *GatewayService) Query(ctx context.Context, req models.PromQueryRequest) (*models.PromResponse, error) {
 	if len(s.promEndpoints) == 0 {
 		return nil, fmt.Errorf("no prometheus endpoints configured")
 	}
@@ -52,7 +54,7 @@ func (s *RouterService) Query(ctx context.Context, req models.PromQueryRequest) 
 }
 
 // QueryRange implements the QueryService interface.
-func (s *RouterService) QueryRange(ctx context.Context, req models.PromQueryRangeRequest) (*models.PromResponse, error) {
+func (s *GatewayService) QueryRange(ctx context.Context, req models.PromQueryRangeRequest) (*models.PromResponse, error) {
 	if len(s.promEndpoints) == 0 {
 		return nil, fmt.Errorf("no prometheus endpoints configured")
 	}
@@ -80,16 +82,38 @@ func (s *RouterService) QueryRange(ctx context.Context, req models.PromQueryRang
 }
 
 // mergeResults merges the data from multiple Prometheus responses.
-func (s *RouterService) mergeResults(results []*models.PromResponse) (*models.PromResponse, error) {
+func (s *GatewayService) mergeResults(results []*models.PromResponse) (*models.PromResponse, error) {
 	if len(results) == 0 {
 		return nil, nil
 	}
 
 	var mergedResultType string
-	var allMetrics []json.RawMessage
+	allMetrics := []json.RawMessage{}
+	seenWarnings := make(map[string]struct{})
+	var allWarnings []string
+	var firstScalarString *models.PromResponse
+
+	addWarning := func(w string) {
+		if _, ok := seenWarnings[w]; !ok {
+			seenWarnings[w] = struct{}{}
+			allWarnings = append(allWarnings, w)
+		}
+	}
 
 	for _, res := range results {
-		if res == nil || res.Status != "success" || len(res.Data.Result) == 0 {
+		if res == nil || res.Status != "success" {
+			continue
+		}
+
+		// Collect warnings from ALL successful downstream responses,
+		// even those with empty result data.
+		for _, w := range res.Warnings {
+			addWarning(w)
+		}
+
+		if len(res.Data.Result) == 0 {
+			// Empty result ("[]" in JSON) is length 2 for raw message bytes.
+			// Only skip truly missing/null result fields, not empty arrays.
 			continue
 		}
 
@@ -99,9 +123,23 @@ func (s *RouterService) mergeResults(results []*models.PromResponse) (*models.Pr
 			return nil, fmt.Errorf("inconsistent result types in downstream responses: expected %q, got %q", mergedResultType, res.Data.ResultType)
 		}
 
+		// Scalar and string result types are [timestamp, "value"] tuples,
+		// not a list of metric objects. Merging across instances is not
+		// meaningful for these types — remember the first valid result but
+		// continue the loop to gather warnings and validate consistency.
+		if mergedResultType == "scalar" || mergedResultType == "string" {
+			if firstScalarString == nil {
+				firstScalarString = res
+			}
+			continue
+		}
+
+		// Only vector and matrix types are concatenatable lists of metrics.
+		if mergedResultType != "vector" && mergedResultType != "matrix" {
+			return nil, fmt.Errorf("unsupported result type for merging: %s", mergedResultType)
+		}
 		var metrics []json.RawMessage
 		if err := json.Unmarshal(res.Data.Result, &metrics); err != nil {
-			// If unmarshaling fails entirely, fail the merge
 			return nil, fmt.Errorf("failed to unmarshal downstream result payload: %w", err)
 		}
 		allMetrics = append(allMetrics, metrics...)
@@ -111,10 +149,21 @@ func (s *RouterService) mergeResults(results []*models.PromResponse) (*models.Pr
 		// Fallback to the first non-nil successful result if any
 		for _, r := range results {
 			if r != nil && r.Status == "success" {
-				return r, nil
+				resp := *r
+				resp.Warnings = allWarnings
+				return &resp, nil
 			}
 		}
 		return nil, fmt.Errorf("all downstream queries failed to produce valid result data")
+	}
+
+	// For scalar/string, return the first valid result with all collected warnings.
+	if mergedResultType == "scalar" || mergedResultType == "string" {
+		if firstScalarString != nil {
+			resp := *firstScalarString
+			resp.Warnings = allWarnings
+			return &resp, nil
+		}
 	}
 
 	mergedRaw, err := json.Marshal(allMetrics)
@@ -122,11 +171,15 @@ func (s *RouterService) mergeResults(results []*models.PromResponse) (*models.Pr
 		return nil, fmt.Errorf("failed to marshal merged results: %w", err)
 	}
 
-	return &models.PromResponse{
+	resp := &models.PromResponse{
 		Status: "success",
 		Data: models.PromData{
 			ResultType: mergedResultType,
 			Result:     mergedRaw,
 		},
-	}, nil
+	}
+	if len(allWarnings) > 0 {
+		resp.Warnings = allWarnings
+	}
+	return resp, nil
 }

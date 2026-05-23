@@ -23,7 +23,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: ./prom-router
+        working-directory: .
 
     steps:
     - name: Checkout Code
@@ -60,7 +60,7 @@ jobs:
         echo '{"port": 8080, "prom_endpoints": ["http://localhost:9090"]}' > config.json
 
         # Start the router in the background
-        ./bin/prom-router -config config.json &
+        ./bin/query-gateway -config config.json &
         ROUTER_PID=$!
 
         # Setup trap to ensure process is killed when the script exits

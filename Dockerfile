@@ -15,7 +15,7 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN go build -ldflags="-w -s" -o bin/prom-router ./cmd/prom-router
+RUN go build -ldflags="-w -s" -o bin/query-gateway ./cmd
 
 # Run Stage
 FROM alpine:3.19
@@ -29,13 +29,13 @@ RUN apk --no-cache add ca-certificates
 RUN adduser -D -u 1000 appuser
 
 # Copy the binary from the builder stage
-COPY --from=builder /app/bin/prom-router /app/prom-router
+COPY --from=builder /app/bin/query-gateway /app/query-gateway
 
 # Explicitly transfer ownership
-RUN chown appuser:appuser /app/prom-router
+RUN chown appuser:appuser /app/query-gateway
 USER appuser
 
 EXPOSE 8080
 
 # Command to run the executable
-ENTRYPOINT ["/app/prom-router"]
+ENTRYPOINT ["/app/query-gateway"]

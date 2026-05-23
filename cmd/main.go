@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/client"
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/config"
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/handler"
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/middleware"
-	"github.com/BlaCkinkGJ/query-gateway/prom-router/internal/service"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/client"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/config"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/handler"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/middleware"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,7 +22,7 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	log.Printf("Starting prom-router on port %d with %d prometheus endpoints", cfg.Port, len(cfg.PromEndpoints))
+	log.Printf("Starting tsdb-query-gateway on port %d with %d prometheus endpoints", cfg.Port, len(cfg.PromEndpoints))
 
 	// Initialize Gin
 	gin.SetMode(gin.ReleaseMode)
@@ -35,8 +35,8 @@ func main() {
 	// You can load timeout from config here; using 0 triggers the default 30s
 	promClient := client.NewPrometheusClient(0)
 
-	// Create the base router service
-	baseRouterService := service.NewRouterService(cfg.PromEndpoints, promClient)
+	// Create the base gateway service
+	baseGatewayService := service.NewGatewayService(cfg.PromEndpoints, promClient)
 
 	// Build the middleware chain
 	var middlewares []middleware.Middleware
@@ -57,7 +57,7 @@ func main() {
 	}
 
 	// Chain the middlewares around the base service.
-	finalService := middleware.Chain(baseRouterService, middlewares...)
+	finalService := middleware.Chain(baseGatewayService, middlewares...)
 
 	queryHandler := handler.NewQueryHandler(finalService)
 
