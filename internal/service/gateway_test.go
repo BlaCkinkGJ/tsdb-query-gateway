@@ -159,6 +159,17 @@ func TestGatewayService_mergeResults_inconsistentTypes(t *testing.T) {
 	}
 }
 
+func TestGatewayService_mergeResults_unknownType(t *testing.T) {
+	svc := NewGatewayService(nil, nil)
+	results := []*models.PromResponse{
+		{Status: "success", Data: models.PromData{ResultType: "custom", Result: json.RawMessage(`[]`)}},
+	}
+	_, err := svc.mergeResults(results)
+	if err == nil {
+		t.Fatal("expected error for unknown result type, got nil")
+	}
+}
+
 func TestGatewayService_defensiveCopy(t *testing.T) {
 	endpoints := []string{"http://prom1", "http://prom2"}
 	svc := NewGatewayService(endpoints, &mockPromClient{})

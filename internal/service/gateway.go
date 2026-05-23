@@ -132,10 +132,12 @@ func (s *GatewayService) mergeResults(results []*models.PromResponse) (*models.P
 			continue
 		}
 
-		// For vector, matrix, and unknown types, assume a concatenatable list of metrics.
+		// Only vector and matrix types are concatenatable lists of metrics.
+		if mergedResultType != "vector" && mergedResultType != "matrix" {
+			return nil, fmt.Errorf("unsupported result type for merging: %s", mergedResultType)
+		}
 		var metrics []json.RawMessage
 		if err := json.Unmarshal(res.Data.Result, &metrics); err != nil {
-			// If the payload isn't a list (e.g., a malformed scalar/string), fail the merge.
 			return nil, fmt.Errorf("failed to unmarshal downstream result payload: %w", err)
 		}
 		allMetrics = append(allMetrics, metrics...)
