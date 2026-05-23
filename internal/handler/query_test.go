@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -23,10 +24,10 @@ func (s *mockQueryService) QueryRange(ctx context.Context, req models.PromQueryR
 type mockQueryServiceError struct{}
 
 func (s *mockQueryServiceError) Query(ctx context.Context, req models.PromQueryRequest) (*models.PromResponse, error) {
-	return nil, context.Canceled
+	return nil, fmt.Errorf("bad_data: invalid parameter \"query\": 1:1: parse error: no expression found in input")
 }
 func (s *mockQueryServiceError) QueryRange(ctx context.Context, req models.PromQueryRangeRequest) (*models.PromResponse, error) {
-	return nil, context.Canceled
+	return nil, fmt.Errorf("bad_data: invalid parameter \"query\": 1:1: parse error: no expression found in input")
 }
 
 func TestHandleQuery(t *testing.T) {
@@ -65,7 +66,7 @@ func TestHandleQuery_ErrorResponse(t *testing.T) {
 	api := router.Group("/api/v1")
 	h.RegisterRoutes(api)
 
-	// Query endpoint should return 500 with generic error, not leak internal details
+	// Query endpoint should return 500 with the actual error from downstream
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/query?query=up", nil)
 	router.ServeHTTP(w, req)
@@ -74,11 +75,8 @@ func TestHandleQuery_ErrorResponse(t *testing.T) {
 	}
 
 	body := w.Body.String()
-	if strings.Contains(body, "context canceled") {
-		t.Error("error response leaked internal error details")
-	}
-	if !strings.Contains(body, "internal server error") {
-		t.Errorf("expected generic error message, got: %s", body)
+	if !strings.Contains(body, "parse error") {
+		t.Errorf("expected downstream error to be propagated, got: %s", body)
 	}
 }
 
@@ -99,7 +97,7 @@ func TestHandleQueryRange_ErrorResponse(t *testing.T) {
 	}
 
 	body := w.Body.String()
-	if strings.Contains(body, "context canceled") {
-		t.Error("error response leaked internal error details")
+	if !strings.Contains(body, "parse error") {
+		t.Errorf("expected downstream error to be propagated, got: %s", body)
 	}
 }

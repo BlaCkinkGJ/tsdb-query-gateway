@@ -109,6 +109,7 @@ func (s *GatewayService) mergeResults(results []*models.PromResponse) (*models.P
 		// not a list of metric objects. Merging across instances is not
 		// meaningful for these types — return the first valid result as-is.
 		if mergedResultType == "scalar" || mergedResultType == "string" {
+			res.Warnings = allWarnings
 			return res, nil
 		}
 
