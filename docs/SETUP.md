@@ -93,8 +93,10 @@ services:
 
 The gateway exposes a simple readiness probe at `/api/v1/query?query=up` (standard Prometheus API). A successful response with HTTP 200 indicates the gateway is operational.
 
+> **Warning:** Because the gateway fails fast if any downstream Prometheus is unavailable, using a functional query as a readiness probe may cause Kubernetes to mark the gateway as unready when a downstream instance is down. Consider implementing a dedicated `/health` endpoint for production deployments.
+
 ## Troubleshooting
 
 - **"no prometheus endpoints configured"** — `prom_endpoints` is missing or empty in config
 - **"middleware ... not registered"** — Declared middleware name does not match any registered factory. Check `middleware.Register` calls.
-- **Downstream timeout** — Increase timeout in `client.NewPrometheusClient(timeout)` or use less complex queries
+- **Downstream timeout** — Use less complex queries. (Note: the gateway's 30s HTTP timeout is hardcoded in `cmd/main.go`; increasing it requires a code change and rebuild.)

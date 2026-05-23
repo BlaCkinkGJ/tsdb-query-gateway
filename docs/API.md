@@ -14,7 +14,7 @@ Execute an instant query against all configured Prometheus endpoints.
 |------|------|----------|-------------|
 | `query` | string | Yes | PromQL expression |
 | `time` | string | No | Evaluation timestamp (Unix or RFC3339) |
-| `timeout` | string | No | Query timeout (e.g., `30s`) |
+| `timeout` | string | No | Query timeout (e.g., `30s`). Capped by the gateway's internal 30s HTTP client timeout. |
 
 **Example Request:**
 ```bash
