@@ -5,7 +5,7 @@
 TSDB Query Gateway accepts a JSON configuration file passed via the `-config` flag.
 
 ```bash
-./query-gateway -config config.json
+./bin/tsdb-query-gateway -config config.json
 ```
 
 ## Schema
@@ -101,7 +101,7 @@ On startup, the following validations are enforced:
 Running without `-config`:
 
 ```bash
-./query-gateway
+./bin/tsdb-query-gateway
 ```
 
 Defaults to:

@@ -16,7 +16,7 @@ cd tsdb-query-gateway
 make build
 ```
 
-The binary will be placed at `bin/query-gateway`.
+The binary will be placed at `bin/tsdb-query-gateway`.
 
 ### Using Docker
 
@@ -31,7 +31,7 @@ docker build -t tsdb-query-gateway .
 Without a config file, the gateway starts on port `8080` and targets a single Prometheus at `http://localhost:9090`:
 
 ```bash
-./bin/query-gateway
+./bin/tsdb-query-gateway
 ```
 
 ### Custom Configuration
@@ -59,7 +59,7 @@ Create a `config.json`:
 Run with the config file:
 
 ```bash
-./bin/query-gateway -config config.json
+./bin/tsdb-query-gateway -config config.json
 ```
 
 ## Configuration Validation
@@ -83,7 +83,7 @@ services:
       - "8080:8080"
     volumes:
       - ./config.json:/app/config.json
-    command: ["/app/query-gateway", "-config", "/app/config.json"]
+    command: ["-config", "/app/config.json"]
     depends_on:
       - prometheus-1
       - prometheus-2

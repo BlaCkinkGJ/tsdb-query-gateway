@@ -29,13 +29,13 @@ TSDB Query Gateway acts as a **query federation layer** in front of multiple Pro
 # Clone and build
 git clone https://github.com/BlaCkinkGJ/tsdb-query-gateway.git
 cd tsdb-query-gateway
-go build -o bin/query-gateway ./cmd
+go build -o bin/tsdb-query-gateway ./cmd
 
 # Run with default config (port 8080, localhost:9090)
-./bin/query-gateway
+./bin/tsdb-query-gateway
 
 # Or with a custom config
-./bin/query-gateway -config config.json
+./bin/tsdb-query-gateway -config config.json
 ```
 
 ## API
@@ -91,7 +91,7 @@ make run      # Build and run locally
 
 ```bash
 docker build -t tsdb-query-gateway .
-docker run -p 8080:8080 -v $(pwd)/config.json:/app/config.json tsdb-query-gateway /app/query-gateway -config /app/config.json
+docker run -p 8080:8080 -v $(pwd)/config.json:/app/config.json tsdb-query-gateway -config /app/config.json
 ```
 
 ## License
