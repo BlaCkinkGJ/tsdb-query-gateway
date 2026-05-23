@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/models"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/pkg/models"
 	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/service"
 )
 

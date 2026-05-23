@@ -3,7 +3,7 @@ package handler
 import (
 	"net/http"
 
-	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/models"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/pkg/models"
 	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/service"
 	"github.com/gin-gonic/gin"
 )

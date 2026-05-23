@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/models"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/pkg/models"
 )
 
 type PrometheusClient interface {

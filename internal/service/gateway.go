@@ -8,23 +8,23 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/client"
-	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/models"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/pkg/models"
 )
 
-type RouterService struct {
+type GatewayService struct {
 	promEndpoints []string
 	promClient    client.PrometheusClient
 }
 
-func NewRouterService(promEndpoints []string, promClient client.PrometheusClient) *RouterService {
-	return &RouterService{
+func NewGatewayService(promEndpoints []string, promClient client.PrometheusClient) *GatewayService {
+	return &GatewayService{
 		promEndpoints: promEndpoints,
 		promClient:    promClient,
 	}
 }
 
 // Query implements the QueryService interface.
-func (s *RouterService) Query(ctx context.Context, req models.PromQueryRequest) (*models.PromResponse, error) {
+func (s *GatewayService) Query(ctx context.Context, req models.PromQueryRequest) (*models.PromResponse, error) {
 	if len(s.promEndpoints) == 0 {
 		return nil, fmt.Errorf("no prometheus endpoints configured")
 	}
@@ -52,7 +52,7 @@ func (s *RouterService) Query(ctx context.Context, req models.PromQueryRequest) 
 }
 
 // QueryRange implements the QueryService interface.
-func (s *RouterService) QueryRange(ctx context.Context, req models.PromQueryRangeRequest) (*models.PromResponse, error) {
+func (s *GatewayService) QueryRange(ctx context.Context, req models.PromQueryRangeRequest) (*models.PromResponse, error) {
 	if len(s.promEndpoints) == 0 {
 		return nil, fmt.Errorf("no prometheus endpoints configured")
 	}
@@ -80,7 +80,7 @@ func (s *RouterService) QueryRange(ctx context.Context, req models.PromQueryRang
 }
 
 // mergeResults merges the data from multiple Prometheus responses.
-func (s *RouterService) mergeResults(results []*models.PromResponse) (*models.PromResponse, error) {
+func (s *GatewayService) mergeResults(results []*models.PromResponse) (*models.PromResponse, error) {
 	if len(results) == 0 {
 		return nil, nil
 	}

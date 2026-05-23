@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/models"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/pkg/models"
 )
 
 // QueryService defines the core interface for handling Prometheus queries.

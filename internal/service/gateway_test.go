@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/BlaCkinkGJ/tsdb-query-gateway/internal/models"
+	"github.com/BlaCkinkGJ/tsdb-query-gateway/pkg/models"
 )
 
 type mockPromClient struct {
@@ -27,7 +27,7 @@ func (m *mockPromClient) QueryRange(ctx context.Context, targetURL string, req m
 	return nil, nil // mock stub
 }
 
-func TestRouterService_Query(t *testing.T) {
+func TestGatewayService_Query(t *testing.T) {
 	mockClient := &mockPromClient{
 		result: []json.RawMessage{
 			json.RawMessage(`{"metric": {"__name__": "up"}}`),
@@ -35,7 +35,7 @@ func TestRouterService_Query(t *testing.T) {
 	}
 
 	endpoints := []string{"http://prom1", "http://prom2"}
-	svc := NewRouterService(endpoints, mockClient)
+	svc := NewGatewayService(endpoints, mockClient)
 
 	req := models.PromQueryRequest{Query: "up"}
 	res, err := svc.Query(context.Background(), req)
