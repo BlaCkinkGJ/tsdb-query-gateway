@@ -27,6 +27,23 @@ type PromResponse struct {
 	Warnings  []string `json:"warnings,omitempty"`
 }
 
+// Clone returns a deep copy of the response.
+func (p *PromResponse) Clone() *PromResponse {
+	if p == nil {
+		return nil
+	}
+	clone := *p
+	if p.Warnings != nil {
+		clone.Warnings = make([]string, len(p.Warnings))
+		copy(clone.Warnings, p.Warnings)
+	}
+	if p.Data.Result != nil {
+		clone.Data.Result = make(json.RawMessage, len(p.Data.Result))
+		copy(clone.Data.Result, p.Data.Result)
+	}
+	return &clone
+}
+
 // PromData represents the data section of a Prometheus response.
 type PromData struct {
 	ResultType string          `json:"resultType"`
