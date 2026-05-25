@@ -12,7 +12,7 @@ TSDB Query Gateway acts as a **query federation layer** in front of multiple Pro
 1. **Routes** the query to all configured Prometheus endpoints in parallel
 2. **Merges** the results intelligently based on Prometheus result types (`vector`, `matrix`, `scalar`, `string`)
 3. **Propagates** warnings and structured errors from downstream instances
-4. **Supports middleware** for custom query processing, analytics, or AI-powered enhancements
+4. **Supports middleware** for custom query processing, AI-powered enhancements, and analytics
 
 ## Features
 
@@ -21,6 +21,8 @@ TSDB Query Gateway acts as a **query federation layer** in front of multiple Pro
 - **Warning Aggregation** — collects and deduplicates warnings from all downstream responses
 - **Structured Error Propagation** — forwards Prometheus API errors (`errorType`, `error`) with original HTTP status codes
 - **Pluggable Middleware** — daisy-chain middleware for custom query interception
+- **AI Middleware** — forwards successful query results to an external AI endpoint for enrichment
+- **Statistical Middleware** — hook point for query analytics and metrics collection (placeholder)
 
 > **⚠️ Experimental:** This project is currently experimental and not recommended for production use. APIs, configuration formats, and behavior may change without notice.
 
@@ -30,7 +32,7 @@ TSDB Query Gateway acts as a **query federation layer** in front of multiple Pro
 # Clone and build
 git clone https://github.com/BlaCkinkGJ/tsdb-query-gateway.git
 cd tsdb-query-gateway
-go build -o bin/tsdb-query-gateway ./cmd
+make build
 
 # Run with default config (port 8080, localhost:9090)
 ./bin/tsdb-query-gateway
@@ -74,6 +76,7 @@ curl "http://localhost:8080/api/v1/query_range?query=up&start=1716000000&end=171
 │   ├── middleware/         # Middleware system + built-in middlewares
 │   └── service/            # Core query routing and merging logic
 ├── pkg/models/             # Public data models (importable externally)
+├── docs/                   # Documentation
 ├── Dockerfile              # Multi-stage Docker build
 ├── Makefile                # Build automation
 └── go.mod                  # Go module definition
